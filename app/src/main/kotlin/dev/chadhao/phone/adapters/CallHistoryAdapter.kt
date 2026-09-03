@@ -15,6 +15,8 @@ import dev.chadhao.phone.activities.SimpleActivity
 import dev.chadhao.phone.databinding.ItemCallHistoryBinding
 import dev.chadhao.phone.extensions.*
 import dev.chadhao.phone.helpers.RecentsHelper
+import dev.chadhao.phone.helpers.callLogBodyPx
+import dev.chadhao.phone.helpers.isCallTimestampRenderable
 import dev.chadhao.phone.interfaces.RefreshItemsListener
 import dev.chadhao.phone.models.CallLogItem
 import dev.chadhao.phone.models.RecentCall
@@ -32,7 +34,6 @@ class CallHistoryAdapter(
     private lateinit var incomingCallText: String
     private lateinit var incomingMissedCallText: String
     private lateinit var blockedCallText: String
-    private var fontSize: Float = activity.getTextSize()
     private val areMultipleSIMsAvailable = activity.areMultipleSIMsAvailable()
     private val missedCallColor = resources.getColor(R.color.red_missed, activity.theme)
 
@@ -161,7 +162,12 @@ class CallHistoryAdapter(
 
                     R.id.cab_copy_date -> {
                         executeItemMenuOperation(callId) {
-                            activity.copyToClipboard(call.startTS.formatDateOrTime(activity, hideTimeOnOtherDays = hideTimeAtOtherDays, false))
+                            val dateToCopy = if (call.startTS.isCallTimestampRenderable()) {
+                                call.startTS.formatDateOrTime(activity, hideTimeOnOtherDays = hideTimeAtOtherDays, false)
+                            } else {
+                                "-"
+                            }
+                            activity.copyToClipboard(dateToCopy)
                         }
                     }
                 }
@@ -184,20 +190,22 @@ class CallHistoryAdapter(
             allowLongClick = refreshItemsListener != null && !call.isUnknownNumber
         ) { _, _ ->
             binding.apply {
-                val currentFontSize = fontSize
-
                 itemRecentsDateTime.apply {
-                    val date = call.startTS.formatDateOrTime(context, hideTimeOnOtherDays = hideTimeAtOtherDays, false)
+                    val date = if (call.startTS.isCallTimestampRenderable()) {
+                        call.startTS.formatDateOrTime(context, hideTimeOnOtherDays = hideTimeAtOtherDays, false)
+                    } else {
+                        "-"
+                    }
                     text = date
                     setTextColor(textColor)
-                    setTextSize(TypedValue.COMPLEX_UNIT_PX, currentFontSize * 0.7f)
+                    setTextSize(TypedValue.COMPLEX_UNIT_PX, activity.callLogBodyPx())
                 }
 
                 itemRecentsDuration.apply {
                     text = call.duration.getFormattedDuration()
                     setTextColor(textColor)
                     beVisibleIf(call.type != Calls.MISSED_TYPE && call.type != Calls.REJECTED_TYPE && call.duration > 0)
-                    setTextSize(TypedValue.COMPLEX_UNIT_PX, currentFontSize * 0.7f)
+                    setTextSize(TypedValue.COMPLEX_UNIT_PX, activity.callLogBodyPx())
                 }
 
                 itemRecentsSimImage.beVisibleIf(areMultipleSIMsAvailable)
@@ -230,7 +238,7 @@ class CallHistoryAdapter(
                     @SuppressLint("SetTextI18n")
                     text = if (isBlockedCall) blockedCallText else type + features
                     setTextColor(if (call.type == Calls.MISSED_TYPE) missedCallColor else textColor)
-                    setTextSize(TypedValue.COMPLEX_UNIT_PX, currentFontSize * 0.8f)
+                    setTextSize(TypedValue.COMPLEX_UNIT_PX, activity.callLogBodyPx())
                 }
 
                 itemRecentsFrame.setOnClickListener {

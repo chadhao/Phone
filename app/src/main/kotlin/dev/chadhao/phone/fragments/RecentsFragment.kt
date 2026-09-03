@@ -87,6 +87,15 @@ class RecentsFragment(
     private var searchQuery: String? = null
     private var recentsHelper = RecentsHelper(context)
 
+    /**
+     * Whether the active search originated from the dialpad. Dialpad searches (T9/pinyin plus
+     * never-called virtual contacts) are rebuilt through [updateSearchDialpadResult]; plain
+     * substring searches go through [updateSearchResult]. Returning from the contact-card detail
+     * page triggers a refresh with a non-empty query, so the refresh must keep the dialpad source
+     * instead of falling back to the substring path (R3: context is preserved on passive return).
+     */
+    private var dialpadSearchActive = false
+
     override fun onFinishInflate() {
         super.onFinishInflate()
         binding = FragmentRecentsBinding.bind(this)
@@ -322,6 +331,7 @@ class RecentsFragment(
 
     override fun onSearchClosed() {
         searchQuery = null
+        dialpadSearchActive = false
         recentsAdapter?.bypassListFilter = false
         showOrHidePlaceholder(allRecentCalls.isEmpty())
         recentsAdapter?.updateItems(allRecentCalls)
@@ -329,6 +339,7 @@ class RecentsFragment(
 
     override fun onSearchQueryChanged(text: String, isDialpad: Boolean) {
         searchQuery = text
+        dialpadSearchActive = isDialpad
         if (isDialpad) updateSearchDialpadResult() else updateSearchResult()
     }
 
@@ -506,11 +517,19 @@ class RecentsFragment(
     }
 
     private fun showOrHidePlaceholder(show: Boolean) {
-        if (show /*&& !binding.progressIndicator.isVisible()*/) {
+        if (show) {
+            binding.recentsPlaceholder.text = context.getString(placeholderTextRes())
             binding.recentsPlaceholder.beVisible()
         } else {
             binding.recentsPlaceholder.beGone()
         }
+    }
+
+    /** Picks the readable empty state: active search → "no matching results", otherwise → call-log state. */
+    private fun placeholderTextRes(): Int = when {
+        !searchQuery.isNullOrEmpty() -> R.string.no_search_results
+        context.hasPermission(PERMISSION_READ_CALL_LOG) -> R.string.no_previous_calls
+        else -> R.string.could_not_access_the_call_history
     }
 
     private fun gotRecents(recents: List<CallLogItem>) {
@@ -597,7 +616,10 @@ class RecentsFragment(
 
                 context.config.recentCallsCache = Gson().toJson(it.take(RECENT_CALL_CACHE_SIZE))
             } else {
-                updateSearchResult()
+                // Keep the search origin: dialpad queries must be rebuilt with the T9/pinyin
+                // engine (and virtual contacts), otherwise returning from the detail page would
+                // show an empty substring result (R3).
+                if (dialpadSearchActive) updateSearchDialpadResult() else updateSearchResult()
                 callback?.invoke()
             }
 

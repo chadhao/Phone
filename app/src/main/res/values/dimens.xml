@@ -63,4 +63,15 @@
     <dimen name="call_slider_margin">58dp</dimen>
     <dimen name="call_button_row_margin">52dp</dimen>
     <dimen name="call_button_row_margin_small">16dp</dimen>
+
+    <!--Call log / contact card typography (Phone-local; keeps commons untouched)-->
+    <dimen name="call_log_title_text_size">22sp</dimen>
+    <dimen name="call_log_body_text_size">14sp</dimen>
+
+    <!--Dialpad SIM call keys (R4)-->
+    <dimen name="dialpad_call_key_icon_size">44dp</dimen>
+    <dimen name="dialpad_call_key_icon_padding">10dp</dimen>
+    <dimen name="dialpad_call_key_label_text_size">11sp</dimen>
+    <dimen name="dialpad_call_key_label_gap">2dp</dimen>
+    <dimen name="dialpad_call_key_min_gap">2dp</dimen>
 </resources>

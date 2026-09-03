@@ -16,6 +16,7 @@
     <string name="show_grouped_calls">Show grouped calls</string>
     <string name="clear_call_history">Clear call history</string>
     <string name="show_call_details">Show call details</string>
+    <string name="no_search_results">No matching results</string>
 
     <!-- Dialpad -->
     <string name="dialpad">Dialpad</string>
@@ -24,6 +25,8 @@
     <string name="call_number">Call number</string>
     <string name="dialpad_beeps">Enable beeps on dialpad button clicks</string>
     <string name="dialpad_vibrations">Enable vibrations on dialpad button clicks</string>
+    <string name="call_with_sim_carrier">Call with %1$s (SIM %2$d)</string>
+    <string name="call_with_sim_ordinal">Call using SIM %1$d</string>
 
     <!-- Dialer -->
     <string name="dialer">Dialer</string>

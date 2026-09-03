@@ -314,6 +314,9 @@ class MainActivity : SimpleActivity() {
         checkShortcuts()
         checkErrorDialog()
 //        newAppRecommendation()
+
+        // Keep the per-SIM call keys in sync after SIM insert/remove or account changes (R4).
+        refreshDialpadCallButtons()
     }
 
     override fun onPause() {
@@ -1179,7 +1182,6 @@ class MainActivity : SimpleActivity() {
 
     @SuppressLint("SetTextI18n")
     private fun initLetters() {
-        val areMultipleSIMsAvailable = areMultipleSIMsAvailable()
         val getProperTextColor = getProperTextColor()
 
         binding.dialpadWrapper.apply {
@@ -1246,72 +1248,13 @@ class MainActivity : SimpleActivity() {
                 it.beInvisibleIf(!config.dialpadShowGrid)
             }
 
-            if (areMultipleSIMsAvailable) {
-                dialpadHide.applyColorFilter(getProperTextColor)
-                dialpadChangeSim.apply {
-                    applyColorFilter(getProperTextColor)
-                    beVisible()
-                    setOnClickListener {
-                        if (config.currentSIMCardIndex == 0) config.currentSIMCardIndex = 1 else config.currentSIMCardIndex = 0
-                        updateCallButton()
-                        maybePerformDialpadHapticFeedback(dialpadHideHolder)
-                        RxAnimation.from(dialpadCallButton)
-                            .shake()
-                            .subscribe()
-                    }
-                }
-                dialpadHideHolder.setOnLongClickListener {
-                    if (config.currentSIMCardIndex == 0) config.currentSIMCardIndex = 1 else config.currentSIMCardIndex = 0
-                    updateCallButton()
-                    maybePerformDialpadHapticFeedback(dialpadHideHolder)
-                    RxAnimation.from(dialpadCallButton)
-                        .shake()
-                        .subscribe()
-                    true
-                }
-                updateCallButton()
-                dialpadCallButton.setOnClickListener {
-                    initCall(binding.dialpadWrapper.dialpadInput.value, config.currentSIMCardIndex)
-                    maybePerformDialpadHapticFeedback(dialpadCallButton)
-                }
-                dialpadCallButton.contentDescription = getString(
-                    if (config.currentSIMCardIndex == 0) R.string.call_from_sim_1 else R.string.call_from_sim_2
-                )
-            } else {
-                dialpadHide.applyColorFilter(getProperTextColor)
-                dialpadChangeSim.beGone()
-                val color = config.simIconsColors[1]
-                val callIcon = resources.getColoredDrawableWithColor(
-                    this@MainActivity,
-                    R.drawable.ic_phone_vector,
-                    color.getContrastColor()
-                )
-                dialpadCallIcon.setImageDrawable(callIcon)
-                dialpadCallButton.background.applyColorFilter(color)
-                dialpadCallButton.setOnClickListener {
-                    initCall(binding.dialpadWrapper.dialpadInput.value, 0)
-                    maybePerformDialpadHapticFeedback(dialpadCallButton)
-                }
-                dialpadCallButton.contentDescription = getString(R.string.call)
-            }
+            dialpadHide.applyColorFilter(getProperTextColor)
+            refreshDialpadCallButtons()
 
             dialpadHideHolder.setOnClickListener {
                 hideDialpad()
                 isDialpadVisibleStored = false
                 maybePerformDialpadHapticFeedback(dialpadHideHolder)
-            }
-
-            dialpadCallButton.setOnLongClickListener {
-                if (binding.dialpadWrapper.dialpadInput.value.isEmpty()) {
-                    val text = getTextFromClipboard()
-                    binding.dialpadWrapper.dialpadInput.setText(text)
-                    if (text != null && text != "") {
-                        binding.dialpadWrapper.dialpadInput.setSelection(text.length)
-                        binding.dialpadWrapper.dialpadInput.requestFocusFromTouch()
-                    }; true
-                } else {
-                    copyNumber(); true
-                }
             }
 
 //            dialpadClearCharHolder.beVisibleIf(binding.dialpadWrapper.dialpadInput.value.isNotEmpty() || areMultipleSIMsAvailable)
@@ -1407,13 +1350,29 @@ class MainActivity : SimpleActivity() {
 //        binding.dialpadAddNumber.setOnClickListener { addNumberToContact() }
     }
 
-    private fun updateCallButton() {
-        val oneSim = config.currentSIMCardIndex == 0
-        val simColor = if (oneSim) config.simIconsColors[1] else config.simIconsColors[2]
-        val callIconId = if (oneSim) R.drawable.ic_phone_one_vector else R.drawable.ic_phone_two_vector
-        val callIcon = resources.getColoredDrawableWithColor(this@MainActivity, callIconId, simColor.getContrastColor())
-        binding.dialpadWrapper.dialpadCallIcon.setImageDrawable(callIcon)
-        binding.dialpadWrapper.dialpadCallButton.background.applyColorFilter(simColor)
+    /** Re-renders the bottom dialpad call keys from the current call-capable accounts (R4). */
+    private fun refreshDialpadCallButtons() {
+        binding.dialpadWrapper.renderDialpadCallKeys(
+            activity = this,
+            onCallClick = { index ->
+                initCall(binding.dialpadWrapper.dialpadInput.value, index)
+                maybePerformDialpadHapticFeedback(binding.dialpadWrapper.dialpadCallContainer)
+            },
+            onCallLongClick = { handleDialpadCallButtonLongPress() }
+        )
+    }
+
+    private fun handleDialpadCallButtonLongPress() {
+        if (binding.dialpadWrapper.dialpadInput.value.isEmpty()) {
+            val text = getTextFromClipboard()
+            binding.dialpadWrapper.dialpadInput.setText(text)
+            if (text != null && text != "") {
+                binding.dialpadWrapper.dialpadInput.setSelection(text.length)
+                binding.dialpadWrapper.dialpadInput.requestFocusFromTouch()
+            }
+        } else {
+            copyNumber()
+        }
     }
 
     private fun updateDialpadButton() {
@@ -1450,8 +1409,10 @@ class MainActivity : SimpleActivity() {
     private fun initCall(number: String = binding.dialpadWrapper.dialpadInput.value, handleIndex: Int, displayName: String? = null) {
         if (number.isNotEmpty()) {
             val nameToDisplay = displayName ?: number
-            if (handleIndex != -1 && areMultipleSIMsAvailable()) {
-                callContactWithSimWithConfirmationCheck(number, nameToDisplay, handleIndex == 0)
+            val availableSims = getDialpadSimEntries()
+            if (handleIndex != -1 && handleIndex < availableSims.size) {
+                // R4: the tapped key already identifies the SIM; place the call with that account.
+                callContactWithSimWithConfirmationCheck(number, nameToDisplay, handleIndex)
             } else {
                 startCallWithConfirmationCheck(number, nameToDisplay)
             }
@@ -1843,35 +1804,10 @@ class MainActivity : SimpleActivity() {
         binding.dialpadWrapper.dialpadWrapper.scaleX = scale
         binding.dialpadWrapper.dialpadWrapper.scaleY = scale
 
-        val defaultPadding = pixels(R.dimen.normal_margin)
-        binding.dialpadWrapper.dialpadCallIcon.setPadding((defaultPadding * (size / 100f)).toInt())
-
         val showTabs = config.showTabs
         val oneTabs: Boolean = showTabs and TAB_FAVORITES == 0 && showTabs and TAB_CONTACTS == 0
         val margin = config.dialpadBottomMargin
         val start = if (oneTabs) navigationBarHeight.toFloat() else pixels(R.dimen.zero)
         binding.dialpadWrapper.dialpadBottomMargin.setHeight((start + margin).toInt())
     }
-
-//    private fun updateCallButtonSize() {
-//        val size = config.callButtonPrimarySize
-//        val view = binding.dialpadWrapper.dialpadCallButton
-//        val margin = (view.width * ((100 - size) / 100f)).toInt()
-////        view.setHeightAndWidth((height * (size / 100f)).toInt())
-////        view.setPadding((height * 0.1765 * (size / 100f)).toInt())
-//
-//        val layoutParams = view.layoutParams as? ViewGroup.MarginLayoutParams
-//        layoutParams?.let { params ->
-//            params.setMargins(margin, margin, margin, margin) // left, top, right, bottom
-//            view.layoutParams = params
-//        }
-//
-////        if (areMultipleSIMsAvailable()) {
-////            val sizeSecondary = config.callButtonSecondarySize
-////            val viewSecondary = binding.dialpadClearWrapper.dialpadCallTwoButton
-////            val dimensSecondary = pixels(R.dimen.dialpad_button_size_small)
-////            viewSecondary.setHeightAndWidth((dimensSecondary * (sizeSecondary / 100f)).toInt())
-////            viewSecondary.setPadding((dimens * 0.1765 * (sizeSecondary / 100f)).toInt())
-////        }
-//    }
 }

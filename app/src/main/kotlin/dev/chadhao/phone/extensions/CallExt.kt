@@ -84,6 +84,22 @@ fun BaseSimpleActivity.callContactWithSim(
     }
 }
 
+/**
+ * Places a call using the call-capable account at the given zero-based index.
+ * Added for the R4 per-SIM dialpad keys; keeps the boolean variant for existing callers.
+ */
+fun BaseSimpleActivity.callContactWithSim(
+    recipient: String,
+    simIndex: Int
+) {
+    handlePermission(PERMISSION_READ_PHONE_STATE) {
+        val handle = getAvailableSIMCardLabels()
+            .sortedBy { it.id }
+            .getOrNull(simIndex)?.handle
+        launchCallIntent(recipient, handle, BuildConfig.RIGHT_APP_KEY)
+    }
+}
+
 fun BaseSimpleActivity.callContactWithSimWithConfirmationCheck(
     recipient: String,
     name: String,
@@ -95,6 +111,21 @@ fun BaseSimpleActivity.callContactWithSimWithConfirmationCheck(
         }
     } else {
         callContactWithSim(recipient, useMainSIM)
+    }
+}
+
+/** Per-SIM confirmation variant matching [callContactWithSim] with an explicit account index. */
+fun BaseSimpleActivity.callContactWithSimWithConfirmationCheck(
+    recipient: String,
+    name: String,
+    simIndex: Int
+) {
+    if (config.showCallConfirmation) {
+        CallConfirmationDialog(this, name) {
+            callContactWithSim(recipient, simIndex)
+        }
+    } else {
+        callContactWithSim(recipient, simIndex)
     }
 }
 

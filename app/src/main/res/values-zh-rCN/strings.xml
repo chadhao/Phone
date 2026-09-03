@@ -11,12 +11,15 @@
     <string name="show_grouped_calls">显示分组呼叫</string>
     <string name="clear_call_history">清除通话记录</string>
     <string name="show_call_details">显示通话详情</string>
+    <string name="no_search_results">未找到匹配结果</string>
     <string name="dialpad">拨号键盘</string>
     <string name="asterisk">星号键</string>
     <string name="hashtag">标签</string>
     <string name="call_number">呼叫号码</string>
     <string name="dialpad_beeps">单击拨号盘按钮时发出哔哔声</string>
     <string name="dialpad_vibrations">单击拨号盘按钮时震动手机</string>
+    <string name="call_with_sim_carrier">使用%1$s（卡%2$d）呼叫</string>
+    <string name="call_with_sim_ordinal">使用卡%1$d呼叫</string>
     <string name="dialer">拨号器</string>
     <string name="accept">接听</string>
     <string name="accept_call">接受通话</string>

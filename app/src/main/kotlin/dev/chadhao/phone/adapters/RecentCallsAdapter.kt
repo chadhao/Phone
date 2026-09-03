@@ -104,6 +104,8 @@ import dev.chadhao.phone.helpers.SWIPE_ACTION_DELETE
 import dev.chadhao.phone.helpers.SWIPE_ACTION_MESSAGE
 import dev.chadhao.phone.helpers.SWIPE_ACTION_NONE
 import dev.chadhao.phone.helpers.SWIPE_ACTION_WHATSAPP
+import dev.chadhao.phone.helpers.callLogBodyPx
+import dev.chadhao.phone.helpers.isCallTimestampRenderable
 import dev.chadhao.phone.interfaces.RefreshItemsListener
 import dev.chadhao.phone.models.CallLogItem
 import dev.chadhao.phone.models.RecentCall
@@ -741,7 +743,7 @@ class RecentCallsAdapter(
 
                 itemRecentsNumber.apply {
                     setTextColor(textColor)
-                    setTextSize(TypedValue.COMPLEX_UNIT_PX, currentFontSize * 0.8f)
+                    setTextSize(TypedValue.COMPLEX_UNIT_PX, activity.callLogBodyPx())
                     val recentsNumber = if (call.phoneNumber == call.name) {
                         if (call.isVoiceMail) voiceMail else call.phoneNumber.getCountryByNumber()
                     } else {
@@ -754,7 +756,9 @@ class RecentCallsAdapter(
                 }
 
                 itemRecentsDateTime.apply {
-                    text = if (activity.config.useRelativeDate) {
+                    text = if (!call.startTS.isCallTimestampRenderable()) {
+                        "-"
+                    } else if (activity.config.useRelativeDate) {
                         DateUtils.getRelativeDateTimeString(
                             context,
                             call.startTS,
@@ -766,7 +770,7 @@ class RecentCallsAdapter(
                         call.startTS.formatDateOrTime(context, hideTimeOnOtherDays = hideTimeAtOtherDays, false)
                     }
                     setTextColor(textColor)
-                    setTextSize(TypedValue.COMPLEX_UNIT_PX, currentFontSize * 0.8f)
+                    setTextSize(TypedValue.COMPLEX_UNIT_PX, activity.callLogBodyPx())
                     if (showCallIcon) updateMarginWithBase(marginNormal,0,marginNormal,0)
                 }
 
@@ -774,7 +778,7 @@ class RecentCallsAdapter(
                     text = context.formatSecondsToShortTimeString(call.duration)
                     setTextColor(textColor)
                     beVisibleIf(call.type != Calls.MISSED_TYPE && call.type != Calls.REJECTED_TYPE && call.duration > 0)
-                    setTextSize(TypedValue.COMPLEX_UNIT_PX, currentFontSize * 0.8f)
+                    setTextSize(TypedValue.COMPLEX_UNIT_PX, activity.callLogBodyPx())
                 }
 
                 itemRecentsSimImage.beVisibleIf(areMultipleSIMsAvailable)
@@ -984,7 +988,7 @@ class RecentCallsAdapter(
 
                 itemRecentsNumber.apply {
                     setTextColor(textColor)
-                    setTextSize(TypedValue.COMPLEX_UNIT_PX, currentFontSize * 0.8f)
+                    setTextSize(TypedValue.COMPLEX_UNIT_PX, activity.callLogBodyPx())
                     val recentsNumber = if (call.phoneNumber == call.name) {
                         if (call.isVoiceMail) voiceMail else call.phoneNumber.getCountryByNumber()
                     } else {
@@ -997,7 +1001,9 @@ class RecentCallsAdapter(
                 }
 
                 itemRecentsDateTime.apply {
-                    text = if (activity.config.useRelativeDate) {
+                    text = if (!call.startTS.isCallTimestampRenderable()) {
+                        "-"
+                    } else if (activity.config.useRelativeDate) {
                         DateUtils.getRelativeDateTimeString(
                             context,
                             call.startTS,
@@ -1009,7 +1015,7 @@ class RecentCallsAdapter(
                         call.startTS.formatDateOrTime(context, hideTimeOnOtherDays = hideTimeAtOtherDays, false)
                     }
                     setTextColor(textColor)
-                    setTextSize(TypedValue.COMPLEX_UNIT_PX, currentFontSize * 0.8f)
+                    setTextSize(TypedValue.COMPLEX_UNIT_PX, activity.callLogBodyPx())
                     if (showCallIcon) updateMarginWithBase(marginNormal,0,marginNormal,0)
                 }
 
@@ -1017,7 +1023,7 @@ class RecentCallsAdapter(
                     text = context.formatSecondsToShortTimeString(call.duration)
                     setTextColor(textColor)
                     beVisibleIf(call.type != Calls.MISSED_TYPE && call.type != Calls.REJECTED_TYPE && call.duration > 0)
-                    setTextSize(TypedValue.COMPLEX_UNIT_PX, currentFontSize * 0.8f)
+                    setTextSize(TypedValue.COMPLEX_UNIT_PX, activity.callLogBodyPx())
                 }
 
                 itemRecentsSimImage.beVisibleIf(areMultipleSIMsAvailable)
@@ -1232,17 +1238,21 @@ class RecentCallsAdapter(
         fun bind(date: CallLogItem.Date) {
             binding.dateTextView.apply {
                 setTextColor(secondaryTextColor)
-                setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize * 0.76f)
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, activity.callLogBodyPx())
 
-                val now = DateTime.now()
-                text = when (date.dayCode) {
-                    now.millis.getDayCode() -> resources.getString(R.string.today)
-                    now.minusDays(1).millis.getDayCode() -> resources.getString(R.string.yesterday)
-                    else -> date.timestamp.formatDateOrTime(
-                        context = activity,
-                        hideTimeOnOtherDays = true,
-                        showCurrentYear = false
-                    )
+                text = if (!date.timestamp.isCallTimestampRenderable()) {
+                    ""
+                } else {
+                    val now = DateTime.now()
+                    when (date.dayCode) {
+                        now.millis.getDayCode() -> resources.getString(R.string.today)
+                        now.minusDays(1).millis.getDayCode() -> resources.getString(R.string.yesterday)
+                        else -> date.timestamp.formatDateOrTime(
+                            context = activity,
+                            hideTimeOnOtherDays = true,
+                            showCurrentYear = false
+                        )
+                    }
                 }
             }
         }

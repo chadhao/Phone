@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/sim_call_key"
+    android:layout_width="0dp"
+    android:layout_height="match_parent"
+    android:layout_weight="1"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="?attr/selectableItemBackgroundBorderless"
+    android:clickable="true"
+    android:focusable="true"
+    tools:ignore="UselessParent">
+
+    <FrameLayout
+        android:id="@+id/sim_key_icon_holder"
+        android:layout_width="@dimen/dialpad_call_key_icon_size"
+        android:layout_height="@dimen/dialpad_call_key_icon_size"
+        android:background="@drawable/circle_background">
+
+        <ImageView
+            android:id="@+id/sim_key_icon"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="@dimen/dialpad_call_key_icon_padding"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter"
+            app:srcCompat="@drawable/ic_phone_vector" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/sim_key_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/dialpad_call_key_label_gap"
+        android:maxWidth="96dp"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:importantForAccessibility="no"
+        android:textSize="@dimen/dialpad_call_key_label_text_size"
+        tools:text="中国移动" />
+</LinearLayout>

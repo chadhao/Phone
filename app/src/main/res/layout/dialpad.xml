@@ -27,24 +27,15 @@
             android:layout_marginBottom="@dimen/small_margin"
             app:layout_constraintTop_toTopOf="parent">
 
-            <ImageView
-                android:id="@+id/dialpadChangeSim"
-                android:layout_width="62dp"
-                android:layout_height="62dp"
-                android:layout_alignParentStart="true"
-                android:layout_centerVertical="true"
-                android:layoutDirection="ltr"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:padding="20dp"
-                android:contentDescription="@string/select_sim"
-                android:src="@drawable/ic_change"/>
-
             <com.goodwy.commons.views.MyEditText
                 android:id="@+id/dialpadInput"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_centerInParent="true"
-                android:layout_marginHorizontal="58dp"
+                android:layout_alignParentStart="true"
+                android:layout_toStartOf="@id/dialpadMenu"
+                android:layout_centerVertical="true"
+                android:layout_marginStart="@dimen/small_margin"
+                android:layout_marginEnd="@dimen/small_margin"
                 android:gravity="center"
                 android:inputType="phone"
                 android:layoutDirection="ltr"
@@ -639,26 +630,17 @@
                     android:src="@drawable/ic_dialpad_vector"/>
             </RelativeLayout>
 
-            <RelativeLayout
-                android:id="@+id/dialpadCallButton"
-                style="@style/DialpadButtonStyle"
+            <LinearLayout
+                android:id="@+id/dialpadCallContainer"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
-                android:layout_margin="@dimen/small_margin"
-                android:contentDescription="@string/call"
+                android:orientation="horizontal"
+                android:gravity="center"
                 app:layout_constraintBottom_toTopOf="@+id/divider_horizontal_five"
                 app:layout_constraintEnd_toStartOf="@+id/divider_vertical_two"
                 app:layout_constraintStart_toEndOf="@+id/divider_vertical_one"
-                app:layout_constraintTop_toBottomOf="@+id/divider_horizontal_four">
-
-                <ImageView
-                    android:id="@+id/dialpadCallIcon"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:layout_centerInParent="true"
-                    android:padding="@dimen/normal_margin"
-                    app:srcCompat="@drawable/ic_phone_vector" />
-            </RelativeLayout>
+                app:layout_constraintTop_toBottomOf="@+id/divider_horizontal_four"
+                tools:ignore="UselessParent"/>
 
             <RelativeLayout
                 android:id="@+id/dialpadClearCharHolder"

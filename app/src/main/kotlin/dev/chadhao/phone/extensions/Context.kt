@@ -14,6 +14,7 @@ import android.media.RingtoneManager
 import android.net.Uri
 import android.os.PowerManager
 import android.telecom.TelecomManager
+import android.telephony.SubscriptionManager
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import com.bumptech.glide.Glide
@@ -43,6 +44,7 @@ import com.goodwy.commons.extensions.getProperBackgroundColor
 import com.goodwy.commons.extensions.getProperPrimaryColor
 import com.goodwy.commons.extensions.getSurfaceColor
 import com.goodwy.commons.extensions.grantReadUriPermission
+import com.goodwy.commons.extensions.hasPermission
 import com.goodwy.commons.extensions.isDynamicTheme
 import com.goodwy.commons.extensions.isSystemInDarkMode
 import com.goodwy.commons.extensions.notificationManager
@@ -52,6 +54,7 @@ import com.goodwy.commons.extensions.startCallPendingIntent
 import com.goodwy.commons.extensions.telecomManager
 import com.goodwy.commons.helpers.IS_RIGHT_APP
 import com.goodwy.commons.helpers.MyContactsContentProvider
+import com.goodwy.commons.helpers.PERMISSION_READ_PHONE_STATE
 import com.goodwy.commons.helpers.SIGNAL_PACKAGE
 import com.goodwy.commons.helpers.SILENT
 import com.goodwy.commons.helpers.SimpleContactsHelper
@@ -111,6 +114,83 @@ fun Context.areMultipleSIMsAvailable(): Boolean {
         telecomManager.callCapablePhoneAccounts.size > 1
     } catch (_: Exception) {
         false
+    }
+}
+
+/** A single outbound SIM account rendered as a dedicated dialpad call key (R4). */
+data class DialpadSim(
+    /** 1-based display order, mirrors SIMAccount.id used by the rest of the app. */
+    val id: Int,
+    /** Clean carrier/account label; null when unavailable or permission denied. */
+    val carrierName: String?,
+    /** Key colour taken from the user-configurable SIM icon colours. */
+    val color: Int,
+)
+
+/**
+ * Returns the accounts that can actually place calls (TelecomManager's
+ * callCapablePhoneAccounts — the same source the app already uses for
+ * multi-SIM detection), annotated with the clean carrier label for the key face.
+ *
+ * Degradation chain (R4):
+ *  1. PhoneAccount.label with any "(address)" suffix stripped → carrier name;
+ *  2. if the label is still empty and READ_PHONE_STATE is granted, fall back to
+ *     SubscriptionManager.carrierName;
+ *  3. otherwise carrierName stays null and the renderer shows the SIM ordinal.
+ *
+ * Exceptions (no telephony permission / not the default dialer / empty account
+ * list) return an empty list — the dialpad then falls back to one default key.
+ */
+@SuppressLint("MissingPermission")
+fun Context.getDialpadSimEntries(): List<DialpadSim> {
+    val simEntries = mutableListOf<DialpadSim>()
+    try {
+        telecomManager.callCapablePhoneAccounts.forEachIndexed { index, account ->
+            val phoneAccount = telecomManager.getPhoneAccount(account)
+            val rawLabel = phoneAccount?.label?.toString().orEmpty()
+            val carrierName = rawLabel.cleanSimLabel() ?: readSimCarrierNameFromSubscriptions(index)
+            val color = try {
+                config.simIconsColors[index + 1]
+            } catch (_: Exception) {
+                phoneAccount?.highlightColor ?: 0
+            }
+            simEntries.add(
+                DialpadSim(
+                    id = index + 1,
+                    carrierName = carrierName,
+                    color = color
+                )
+            )
+        }
+    } catch (_: Exception) {
+    }
+
+    return simEntries
+}
+
+/** Strips a PhoneAccount label down to the clean carrier/account name. */
+private fun String.cleanSimLabel(): String? {
+    var label = trim()
+    if (label.isEmpty()) return null
+
+    // Account labels frequently append the phone number, e.g. "中国移动 (138...)".
+    val numberStart = label.indexOf('(')
+    if (numberStart > 0 && label.endsWith(")")) {
+        val candidate = label.substring(0, numberStart).trim()
+        if (candidate.isNotEmpty()) label = candidate
+    }
+    return label.ifEmpty { null }
+}
+
+@SuppressLint("MissingPermission")
+private fun Context.readSimCarrierNameFromSubscriptions(index: Int): String? {
+    if (!hasPermission(PERMISSION_READ_PHONE_STATE)) return null
+    return try {
+        val subscriptionManager = getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as SubscriptionManager
+        val activeSubscriptions = subscriptionManager.activeSubscriptionInfoList ?: emptyList()
+        activeSubscriptions.getOrNull(index)?.carrierName?.toString()?.trim()?.ifEmpty { null }
+    } catch (_: Exception) {
+        null
     }
 }
 
