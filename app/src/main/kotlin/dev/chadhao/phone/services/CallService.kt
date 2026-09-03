@@ -1,0 +1,131 @@
+package dev.chadhao.phone.services
+
+import android.telecom.Call
+import android.telecom.CallAudioState
+import android.telecom.InCallService
+import com.goodwy.commons.extensions.baseConfig
+import com.goodwy.commons.extensions.canUseFullScreenIntent
+import com.goodwy.commons.extensions.hasPermission
+import com.goodwy.commons.helpers.PERMISSION_POST_NOTIFICATIONS
+import dev.chadhao.phone.activities.CallActivity
+import dev.chadhao.phone.extensions.config
+import dev.chadhao.phone.extensions.isOutgoing
+import dev.chadhao.phone.extensions.keyguardManager
+import dev.chadhao.phone.extensions.powerManager
+import dev.chadhao.phone.helpers.*
+import dev.chadhao.phone.models.Events
+import org.greenrobot.eventbus.EventBus
+
+class CallService : InCallService() {
+    private val context = this
+    private val callNotificationManager by lazy { CallNotificationManager(this) }
+
+    private val callListener = object : Call.Callback() {
+        override fun onStateChanged(call: Call, state: Int) {
+            super.onStateChanged(call, state)
+
+            callNotificationManager.setupNotification()
+
+            if (state == Call.STATE_DISCONNECTED || state == Call.STATE_DISCONNECTING) {
+                callNotificationManager.cancelNotification()
+            }
+
+            try {
+                if (baseConfig.flashForAlerts) MyCameraImpl.newInstance(context).stopSOS()
+            } catch (_: Exception) { }
+        }
+    }
+
+    override fun onCallAdded(call: Call) {
+        super.onCallAdded(call)
+        CallManager.onCallAdded(call)
+        CallManager.inCallService = this
+        call.registerCallback(callListener)
+
+        // lowPriority == true  ➜ start the call activity directly + post a quiet notification
+        // lowPriority == false ➜ rely on the high-priority full-screen-intent notification
+        //
+        // Locked: start the activity directly. Relying on the FSI alone was unreliable on
+        // some OEM skins (Samsung OneUI demoted it to a silent notification, so nothing
+        // showed over the lock screen). The default dialer gets a brief background-activity-
+        // start grace window during onCallAdded, so the direct start is allowed, and the
+        // quiet notification avoids a duplicate heads-up banner over our own full screen.
+        // Incoming (unlocked): honour the user's "show incoming calls full screen" setting.
+        // Outgoing (unlocked): start the activity directly.
+        val isOutgoing = call.isOutgoing()
+        val isIncoming = !isOutgoing
+        // Use both checks so a phone that is locked but with the screen on (e.g. user
+        // tapped power to look at the lock screen) still counts as locked.
+        val isDeviceLocked = !powerManager.isInteractive || keyguardManager.isDeviceLocked
+        val lowPriority = when {
+            isDeviceLocked -> true
+            isIncoming && !isDeviceLocked -> config.showIncomingCallsFullScreen
+            else -> true
+        }
+
+        if (
+            lowPriority
+            || !hasPermission(PERMISSION_POST_NOTIFICATIONS)
+            || !canUseFullScreenIntent()
+        ) {
+            try {
+                val needSelectSIM = isOutgoing && call.details.accountHandle == null
+                startActivity(CallActivity.getStartIntent(this, needSelectSIM = needSelectSIM))
+            } catch (e: Exception) {
+                // seems like startActivity can throw AndroidRuntimeException and
+                // ActivityNotFoundException, not yet sure when and why, lets show a notification
+//                callNotificationManager.setupNotification()
+                context.baseConfig.lastError = "CallService: $e"
+            }
+        }
+
+        callNotificationManager.setupNotification(lowPriority)
+    }
+
+    override fun onCallRemoved(call: Call) {
+        super.onCallRemoved(call)
+        call.unregisterCallback(callListener)
+        callNotificationManager.cancelNotification()
+        val wasPrimaryCall = call == CallManager.getPrimaryCall()
+        CallManager.onCallRemoved(call)
+        EventBus.getDefault().post(Events.RefreshCallLog)
+        if (CallManager.getPhoneState() == NoCall) {
+            CallManager.inCallService = null
+//            callNotificationManager.cancelNotification()
+        } else {
+            callNotificationManager.setupNotification()
+            if (wasPrimaryCall) {
+                startActivity(CallActivity.getStartIntent(this))
+            }
+        }
+
+        try {
+            if (baseConfig.flashForAlerts) MyCameraImpl.newInstance(this).stopSOS()
+        } catch (_: Exception) { }
+    }
+
+    override fun onCallAudioStateChanged(audioState: CallAudioState?) {
+        super.onCallAudioStateChanged(audioState)
+        if (audioState != null) {
+            CallManager.onAudioStateChanged(audioState)
+        }
+    }
+
+    override fun onSilenceRinger() {
+        super.onSilenceRinger()
+
+        try {
+            if (baseConfig.flashForAlerts) MyCameraImpl.newInstance(this).stopSOS()
+        } catch (_: Exception) { }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        callNotificationManager.cancelNotification()
+
+        try {
+            if (baseConfig.flashForAlerts) MyCameraImpl.newInstance(this).stopSOS()
+        } catch (_: Exception) { }
+    }
+}
+

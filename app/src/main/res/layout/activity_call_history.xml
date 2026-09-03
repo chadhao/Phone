@@ -173,7 +173,7 @@
         layout="@layout/top_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:layout_behavior="dev.goodwy.phone.helpers.CallHistoryTopBehavior"/>
+        app:layout_behavior="dev.chadhao.phone.helpers.CallHistoryTopBehavior"/>
 
     <com.goodwy.commons.views.MyRecyclerView
         android:id="@+id/mainRecyclerView"

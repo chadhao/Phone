@@ -3,7 +3,7 @@
 <img src="app/src/main/res/drawable/ic_launcher.png" width="120" alt="App icon"/>
 
 # AlRight Phone
-<a href='https://play.google.com/store/apps/details?id=dev.goodwy.phone'><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png' height=80/></a>
+<a href='https://play.google.com/store/apps/details?id=dev.chadhao.phone'><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png' height=80/></a>
 </div>
 
 A copy of our Right Dialer app, which has a number of differences:<br>

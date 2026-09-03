@@ -1,0 +1,55 @@
+package dev.chadhao.phone.receivers
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import dev.chadhao.phone.activities.CallActivity
+import dev.chadhao.phone.extensions.audioManager
+import dev.chadhao.phone.extensions.config
+import dev.chadhao.phone.helpers.ACCEPT_CALL
+import dev.chadhao.phone.helpers.CallManager
+import dev.chadhao.phone.helpers.CallNotificationManager
+import dev.chadhao.phone.helpers.DECLINE_CALL
+import dev.chadhao.phone.helpers.MICROPHONE_CALL
+import dev.chadhao.phone.helpers.SPEAKER_CALL
+
+class CallActionReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        when (intent.action) {
+            DECLINE_CALL -> CallManager.reject()
+            ACCEPT_CALL -> {
+                if (!context.config.keepCallsInPopUp) context.startActivity(CallActivity.getStartIntent(context))
+                CallManager.accept()
+                if (context.config.keepCallsInPopUp && context.config.turnOnSpeakerInPopup) {
+                    CallManager.toggleSpeakerRoute(true)
+                }
+            }
+
+            MICROPHONE_CALL -> {
+                val newMuteState = !CallManager.isMicrophoneMuted
+                CallManager.isMicrophoneMuted = newMuteState
+
+                // Apply status to service and audio manager
+                CallManager.inCallService?.setMuted(newMuteState)
+                context.audioManager.isMicrophoneMute = newMuteState
+
+                CallNotificationManager(context).updateNotification()
+            }
+
+            SPEAKER_CALL -> {
+//                val callManager = CallManager
+//                val currentRoute = callManager.getCallAudioRoute()
+//                val newRoute = if (currentRoute == AudioRoute.SPEAKER) {
+//                    CallAudioState.ROUTE_WIRED_OR_EARPIECE
+//                } else {
+//                    CallAudioState.ROUTE_SPEAKER
+//                }
+//                callManager.setAudioRoute(newRoute)
+//                CallNotificationManager(context).updateNotification()
+
+                CallManager.toggleSpeakerRoute()
+                CallNotificationManager(context).updateNotification()
+            }
+        }
+    }
+}

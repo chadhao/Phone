@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<dev.goodwy.phone.fragments.RecentsFragment xmlns:android="http://schemas.android.com/apk/res/android"
+<dev.chadhao.phone.fragments.RecentsFragment xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/recents_fragment"
@@ -90,4 +90,4 @@
         <!--        app:trackCornerRadius="@dimen/small_margin" />-->
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
-</dev.goodwy.phone.fragments.RecentsFragment>
+</dev.chadhao.phone.fragments.RecentsFragment>

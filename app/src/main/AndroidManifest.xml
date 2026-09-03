@@ -50,37 +50,8 @@
         android:required="false" />
 
     <queries>
-        <package android:name="dev.goodwy.phone.debug" />
-        <package android:name="dev.goodwy.phone" />
-        <package android:name="dev.goodwy.messages.debug" />
-        <package android:name="dev.goodwy.messages" />
-        <package android:name="dev.goodwy.contacts.debug" />
-        <package android:name="dev.goodwy.contacts" />
-        <package android:name="dev.goodwy.gallery.debug" />
-        <package android:name="dev.goodwy.gallery" />
-        <package android:name="dev.goodwy.math.debug" />
-        <package android:name="dev.goodwy.math" />
-        <package android:name="dev.goodwy.filemanager.debug" />
-        <package android:name="dev.goodwy.filemanager" />
-        <package android:name="dev.goodwy.calendar" />
-        <package android:name="dev.goodwy.calendar.debug" />
-
-        <package android:name="com.goodwy.dialer.debug" />
-        <package android:name="com.goodwy.dialer" />
-        <package android:name="com.goodwy.contacts.debug" />
-        <package android:name="com.goodwy.contacts" />
-        <package android:name="com.goodwy.smsmessenger.debug" />
-        <package android:name="com.goodwy.smsmessenger" />
-        <package android:name="com.goodwy.voicerecorder.debug" />
-        <package android:name="com.goodwy.voicerecorder" />
-        <package android:name="com.goodwy.gallery.debug" />
-        <package android:name="com.goodwy.gallery" />
-        <package android:name="com.goodwy.filemanager.debug" />
-        <package android:name="com.goodwy.filemanager" />
-        <package android:name="com.goodwy.audiobooklite" />
-        <package android:name="com.goodwy.keyboard" />
-        <package android:name="com.goodwy.calendar" />
-
+        <package android:name="dev.chadhao.phone.debug" />
+        <package android:name="dev.chadhao.phone" />
         <package android:name="com.whatsapp" />
         <package android:name="com.whatsapp.w4b" />
 
@@ -118,7 +89,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <data android:mimeType="vnd.android.cursor.dir/calls" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="com.goodwy.dialer.scheme" />
+                <data android:scheme="dev.chadhao.phone.scheme" />
             </intent-filter>
 
             <intent-filter>
@@ -335,7 +306,7 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.telecom.action.SHOW_MISSED_CALLS_NOTIFICATION" />
-                <action android:name="com.goodwy.phone.action.MISSED_CALL_CANCEL" />
+                <action android:name="dev.chadhao.phone.action.missed_call_cancel" />
             </intent-filter>
         </receiver>
 
