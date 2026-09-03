@@ -325,14 +325,16 @@ class RecentCallsAdapter(
 
     private fun callContact(useSimOne: Boolean) {
         val phoneNumber = getSelectedPhoneNumber() ?: return
-        val name = getSelectedName() ?: return
+        // Cached rows may still hold a spaced/reversed Chinese name; normalise before confirming.
+        val name = ContactNameFormatter.formatDisplayName(getSelectedName() ?: return)
 
         activity.callContactWithSimWithConfirmationCheck(phoneNumber, name, useSimOne)
     }
 
     private fun callContact(prefix: String = "") {
         val phoneNumber = getSelectedPhoneNumber() ?: return
-        val name = getSelectedName() ?: return
+        // Cached rows may still hold a spaced/reversed Chinese name; normalise before confirming.
+        val name = ContactNameFormatter.formatDisplayName(getSelectedName() ?: return)
 
         (activity as SimpleActivity).startCallWithConfirmationCheck("$prefix$phoneNumber", name)
     }
