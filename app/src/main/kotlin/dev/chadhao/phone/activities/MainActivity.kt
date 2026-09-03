@@ -558,7 +558,7 @@ class MainActivity : SimpleActivity() {
                     storedContactShortcuts.addAll(starred)
 
                     starred.reversed().forEach { contact ->
-                        val name = contact.getNameToDisplay()
+                        val name = ContactNameFormatter.format(contact)
                         getShortcutImageNeedBackground(contact.photoUri, name) { image ->
                             this.runOnUiThread {
                                 val number = if (contact.phoneNumbers.size == 1) {

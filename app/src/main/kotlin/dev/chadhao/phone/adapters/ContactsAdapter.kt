@@ -10,7 +10,6 @@ import android.net.Uri
 import android.telephony.PhoneNumberUtils
 import android.text.Spannable
 import android.text.SpannableString
-import android.text.SpannableStringBuilder
 import android.text.TextUtils
 import android.text.style.ForegroundColorSpan
 import android.util.TypedValue
@@ -73,8 +72,6 @@ class ContactsAdapter(
     ItemTouchHelperContract, MyRecyclerView.MyZoomListener {
 
     private var textToHighlight = highlightText
-    // When a phonetic search is active, the pinyin abbreviation is appended after the name.
-    var showSearchPinyinAbbr = false
     var fontSize: Float = activity.getTextSize()
     private var touchHelper: ItemTouchHelper? = null
     private var startReorderDragListener: StartReorderDragListener? = null
@@ -236,7 +233,7 @@ class ContactsAdapter(
 
     private fun askConfirmBlock(contact: Contact, callback: (Boolean) -> Unit) {
         val baseString = R.string.block_confirmation
-        val question = String.format(resources.getString(baseString), contact.name)
+        val question = String.format(resources.getString(baseString), ContactNameFormatter.format(contact))
 
         ConfirmationDialog(activity, question) {
             val contactBlocked = activity.blockContact(contact)
@@ -260,7 +257,7 @@ class ContactsAdapter(
     private fun callContact() {
         val contact = getItemWithKey(selectedKeys.first()) ?: return
         if (activity.config.showCallConfirmation) {
-            CallConfirmationDialog(activity as SimpleActivity, contact.getNameToDisplay()) {
+            CallConfirmationDialog(activity as SimpleActivity, ContactNameFormatter.format(contact)) {
                 activity.apply {
                     initiateCall(contact) { launchCallIntent(it, key = BuildConfig.RIGHT_APP_KEY) }
                 }
@@ -309,7 +306,7 @@ class ContactsAdapter(
         val itemsCnt = selectedKeys.size
         val firstItem = getSelectedItems().firstOrNull() ?: return
         val items = if (itemsCnt == 1) {
-            "\"${firstItem.getNameToDisplay()}\""
+            "\"${ContactNameFormatter.format(firstItem)}\""
         } else {
             resources.getQuantityString(R.plurals.delete_contacts, itemsCnt, itemsCnt)
         }
@@ -366,7 +363,7 @@ class ContactsAdapter(
         if (manager.isRequestPinShortcutSupported) {
             SimpleContactsHelper(activity).getShortcutImage(
                 path = contact.photoUri,
-                placeholderName = contact.getNameToDisplay(),
+                placeholderName = ContactNameFormatter.format(contact),
                 isCompany = contact.isABusinessContact()
             ) { image ->
                 activity.runOnUiThread {
@@ -378,7 +375,7 @@ class ContactsAdapter(
                         }
 
                         val shortcut = ShortcutInfo.Builder(activity, contact.hashCode().toString())
-                            .setShortLabel(contact.getNameToDisplay())
+                            .setShortLabel(ContactNameFormatter.format(contact))
                             .setIcon(Icon.createWithBitmap(image))
                             .setIntent(intent)
                             .build()
@@ -459,14 +456,18 @@ class ContactsAdapter(
                 setTextColor(textColor)
                 setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize)
 
-                val name = contact.getNameToDisplay()
-                val nameToShow = if (textToHighlight.isEmpty()) {
-                    name
-                } else {
+                val name = ContactNameFormatter.format(contact)
+                var nameToShow: CharSequence = name
+                if (textToHighlight.isNotEmpty()) {
                     val normalizedName = name.normalizeString()
                     val normalizedSearchText = textToHighlight.normalizeString()
-                    if (normalizedName.contains(normalizedSearchText, true)) {
+                    nameToShow = if (normalizedName.contains(normalizedSearchText, true)) {
                         name.highlightTextPart(normalizedSearchText, properPrimaryColor)
+                    } else if (PinyinConverter.containsChinese(name)) {
+                        // Pinyin/T9 match: paint the corresponding Han characters (they are not literal query text).
+                        val isDigitQuery = textToHighlight.all { it.isDigit() }
+                        val ranges = ContactSearchIndex.highlightRanges(name, textToHighlight, isDigitQuery)
+                        if (ranges.isNullOrEmpty()) name else applyRangeHighlight(name, ranges, properPrimaryColor)
                     } else {
                         val langPref = activity.config.dialpadSecondaryLanguage ?: ""
                         val langLocale = Locale.getDefault().language
@@ -475,12 +476,7 @@ class ContactsAdapter(
                         name.highlightTextFromNumbers(textToHighlight, properPrimaryColor, lang)
                     }
                 }
-                val abbr = if (showSearchPinyinAbbr) ContactSearchIndex.abbreviationFor(contact.id) else null
-                text = if (abbr.isNullOrEmpty()) {
-                    nameToShow
-                } else {
-                    SpannableStringBuilder(nameToShow).append("  ·  ").append(abbr)
-                }
+                text = nameToShow
             }
             itemContactNumber.apply {
                 beGoneIf(!showNumber)
@@ -537,12 +533,12 @@ class ContactsAdapter(
                         val drawable = ResourcesCompat.getDrawable(resources, R.drawable.placeholder_company, activity.theme)
                         if (baseConfig.useColoredContacts) {
                             val letterBackgroundColors = activity.getLetterBackgroundColors()
-                            val color = letterBackgroundColors[abs(contact.getNameToDisplay().hashCode()) % letterBackgroundColors.size].toInt()
+                            val color = letterBackgroundColors[abs(ContactNameFormatter.format(contact).hashCode()) % letterBackgroundColors.size].toInt()
                             (drawable as LayerDrawable).findDrawableByLayerId(R.id.placeholder_company_background).applyColorFilter(color)
                         }
                         itemContactImage.setImageDrawable(drawable)
                     } else {
-                        SimpleContactsHelper(root.context).loadContactImage(contact.photoUri, itemContactImage, contact.getNameToDisplay())
+                        SimpleContactsHelper(root.context).loadContactImage(contact.photoUri, itemContactImage, ContactNameFormatter.format(contact))
                     }
                 }
             }
@@ -883,7 +879,7 @@ class ContactsAdapter(
 
     private fun swipedCall(contact: Contact) {
         if (activity.config.showCallConfirmation) {
-            CallConfirmationDialog(activity as SimpleActivity, contact.getNameToDisplay()) {
+            CallConfirmationDialog(activity as SimpleActivity, ContactNameFormatter.format(contact)) {
                 activity.apply {
                     initiateCall(contact) { launchCallIntent(it, key = BuildConfig.RIGHT_APP_KEY) }
                 }

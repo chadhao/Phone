@@ -6,7 +6,6 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.LayerDrawable
 import android.net.Uri
 import android.provider.CallLog.Calls
-import android.text.Spannable
 import android.text.SpannableString
 import android.text.SpannableStringBuilder
 import android.text.TextUtils
@@ -92,8 +91,11 @@ import dev.chadhao.phone.extensions.startCallWithConfirmationCheck
 import dev.chadhao.phone.extensions.startContactDetailsIntentRecommendation
 import dev.chadhao.phone.helpers.CURRENT_RECENT_CALL
 import dev.chadhao.phone.helpers.CURRENT_RECENT_CALL_LIST
+import dev.chadhao.phone.helpers.ContactNameFormatter
+import dev.chadhao.phone.helpers.ContactSearchIndex
 import dev.chadhao.phone.helpers.FILTER_RECENT_CALLS_ALL
 import dev.chadhao.phone.helpers.FILTER_RECENT_CALLS_CONTACTS
+import dev.chadhao.phone.helpers.PinyinConverter
 import dev.chadhao.phone.helpers.RecentsHelper
 import dev.chadhao.phone.helpers.SWIPE_ACTION_BLOCK
 import dev.chadhao.phone.helpers.SWIPE_ACTION_DELETE
@@ -308,17 +310,6 @@ class RecentCallsAdapter(
             }
         super.submitList(listFilter) {
             layoutManager.onRestoreInstanceState(recyclerViewState)
-        }
-    }
-
-    /** Appends a dimmed pinyin abbreviation (e.g. "  LBW") after the displayed name. */
-    private fun CharSequence.appendPinyinAbbr(abbr: String?): CharSequence {
-        if (abbr.isNullOrEmpty()) return this
-        return SpannableStringBuilder(this).apply {
-            val start = length
-            append("  ")
-            append(abbr)
-            setSpan(ForegroundColorSpan(secondaryTextColor), start, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
     }
 
@@ -704,7 +695,7 @@ class RecentCallsAdapter(
                 if (getLastItem() == call || !activity.config.useDividers) divider.visibility = View.INVISIBLE else divider.visibility = View.VISIBLE
 
 //                val matchingContact = findContactByCall(call)
-                val name = call.name //matchingContact?.getNameToDisplay() ?: call.name
+                val name = ContactNameFormatter.formatDisplayName(call.name) //matchingContact?.getNameToDisplay() ?: call.name
                 val formatPhoneNumbers = activity.config.formatPhoneNumbers
                 var nameToShow: CharSequence = if (name == call.phoneNumber && formatPhoneNumbers) {
                     SpannableString(name.formatPhoneNumber())
@@ -712,15 +703,21 @@ class RecentCallsAdapter(
                     SpannableString(formatterUnicodeWrap(name))
                 }
 
-                if (call.groupedCalls != null) {
-                    nameToShow = SpannableString("$nameToShow (${call.groupedCalls.size})")
-                }
-
                 if (textToHighlight.isNotEmpty() && nameToShow.contains(textToHighlight, true)) {
                     nameToShow = nameToShow.toString().highlightTextPart(textToHighlight, properPrimaryColor)
+                } else if (textToHighlight.isNotEmpty() && PinyinConverter.containsChinese(name) && textToHighlight.any { it.isLetterOrDigit() }) {
+                    // Pinyin/T9 name match: paint the corresponding Chinese characters blue.
+                    val ranges = ContactSearchIndex.highlightRanges(
+                        name,
+                        textToHighlight,
+                        textToHighlight.all { it.isDigit() } && textToHighlight.isNotEmpty()
+                    )
+                    if (!ranges.isNullOrEmpty()) nameToShow = applyRangeHighlight(name, ranges, properPrimaryColor)
                 }
 
-                nameToShow = nameToShow.appendPinyinAbbr(call.pinyinAbbr)
+                if (call.groupedCalls != null) {
+                    nameToShow = SpannableStringBuilder(nameToShow).append(" (${call.groupedCalls.size})")
+                }
 
                 itemRecentsName.apply {
                     text = nameToShow
@@ -941,7 +938,7 @@ class RecentCallsAdapter(
                 if (getLastItem() == call || !activity.config.useDividers) divider.visibility = View.INVISIBLE else divider.visibility = View.VISIBLE
 
 //                val matchingContact = findContactByCall(call)
-                val name = call.name //matchingContact?.getNameToDisplay() ?: call.name
+                val name = ContactNameFormatter.formatDisplayName(call.name) //matchingContact?.getNameToDisplay() ?: call.name
                 val formatPhoneNumbers = activity.config.formatPhoneNumbers
                 var nameToShow: CharSequence = if (name == call.phoneNumber && formatPhoneNumbers) {
                     SpannableString(name.formatPhoneNumber())
@@ -949,15 +946,21 @@ class RecentCallsAdapter(
                     SpannableString(formatterUnicodeWrap(name))
                 }
 
-                if (call.groupedCalls != null) {
-                    nameToShow = SpannableString("$nameToShow (${call.groupedCalls.size})")
-                }
-
                 if (textToHighlight.isNotEmpty() && nameToShow.contains(textToHighlight, true)) {
                     nameToShow = nameToShow.toString().highlightTextPart(textToHighlight, properPrimaryColor)
+                } else if (textToHighlight.isNotEmpty() && PinyinConverter.containsChinese(name) && textToHighlight.any { it.isLetterOrDigit() }) {
+                    // Pinyin/T9 name match: paint the corresponding Chinese characters blue.
+                    val ranges = ContactSearchIndex.highlightRanges(
+                        name,
+                        textToHighlight,
+                        textToHighlight.all { it.isDigit() } && textToHighlight.isNotEmpty()
+                    )
+                    if (!ranges.isNullOrEmpty()) nameToShow = applyRangeHighlight(name, ranges, properPrimaryColor)
                 }
 
-                nameToShow = nameToShow.appendPinyinAbbr(call.pinyinAbbr)
+                if (call.groupedCalls != null) {
+                    nameToShow = SpannableStringBuilder(nameToShow).append(" (${call.groupedCalls.size})")
+                }
 
                 itemRecentsName.apply {
                     text = nameToShow

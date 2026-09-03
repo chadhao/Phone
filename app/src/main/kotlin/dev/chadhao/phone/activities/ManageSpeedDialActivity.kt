@@ -30,6 +30,7 @@ import dev.chadhao.phone.extensions.areMultipleSIMsAvailable
 import dev.chadhao.phone.extensions.config
 import dev.chadhao.phone.extensions.getAvailableSIMCardLabels
 import dev.chadhao.phone.extensions.getHandleToUse
+import dev.chadhao.phone.helpers.ContactNameFormatter
 import dev.chadhao.phone.interfaces.RemoveSpeedDialListener
 import dev.chadhao.phone.models.SpeedDial
 
@@ -118,7 +119,7 @@ class ManageSpeedDialActivity : SimpleActivity(), RemoveSpeedDialListener {
                                 RadioGroupDialog(this, ArrayList(radioItems), checkedItemId = checkedItemId) { selectedValue ->
                                     val selectedNumber = selectedValue as PhoneNumber
                                     speedDialValues.first { it.id == clickedContact.id }.apply {
-                                        displayName = selectedContact.getNameToDisplay()
+                                        displayName = ContactNameFormatter.format(selectedContact)
                                         number = selectedNumber.value
                                         type = selectedNumber.type
                                         label = selectedNumber.label
@@ -129,7 +130,7 @@ class ManageSpeedDialActivity : SimpleActivity(), RemoveSpeedDialListener {
                             } else {
                                 speedDialValues.first { it.id == clickedContact.id }.apply {
                                     val selectedNumber = selectedContact.phoneNumbers.first()
-                                    displayName = selectedContact.getNameToDisplay()
+                                    displayName = ContactNameFormatter.format(selectedContact)
                                     number = selectedNumber.value
                                     type = selectedNumber.type
                                     label = selectedNumber.label

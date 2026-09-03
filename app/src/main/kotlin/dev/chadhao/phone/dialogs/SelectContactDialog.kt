@@ -13,6 +13,7 @@ import dev.chadhao.phone.R
 import dev.chadhao.phone.activities.SimpleActivity
 import dev.chadhao.phone.adapters.ContactsAdapter
 import dev.chadhao.phone.databinding.DialogSelectContactBinding
+import dev.chadhao.phone.helpers.ContactNameFormatter
 import dev.chadhao.phone.extensions.setupWithContacts
 
 class SelectContactDialog(val activity: SimpleActivity, val contacts: List<Contact>, val callback: (selectedContact: Contact) -> Unit) {
@@ -135,7 +136,7 @@ class SelectContactDialog(val activity: SimpleActivity, val contacts: List<Conta
         val shouldNormalize = fixedText.normalizeString() == fixedText
         if (query.isNotEmpty()) {
             contactsToShow = contacts.filter {
-                getProperText(it.getNameToDisplay(), shouldNormalize).contains(fixedText, true) ||
+                getProperText(ContactNameFormatter.format(it), shouldNormalize).contains(fixedText, true) ||
                     getProperText(it.nickname, shouldNormalize).contains(fixedText, true) ||
                     (fixedText.toIntOrNull() != null && it.phoneNumbers.any {
                         fixedText.normalizePhoneNumber().isNotEmpty() && it.normalizedNumber.contains(fixedText.normalizePhoneNumber(), true)

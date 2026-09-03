@@ -80,7 +80,7 @@ fun getCallContact(context: Context, call: Call?, callback: (CallContact) -> Uni
 
                 val contact = contacts.firstOrNull { it.doesHavePhoneNumber(number) }
                 if (contact != null) {
-                    callContact.name = contact.getNameToDisplay()
+                    callContact.name = ContactNameFormatter.format(contact)
                     callContact.photoUri = contact.photoUri
 
                     val specificPhoneNumber = contact.phoneNumbers.firstOrNull { it.normalizedNumber == number }
@@ -103,7 +103,7 @@ fun getCallContact(context: Context, call: Call?, callback: (CallContact) -> Uni
                     }
 
                     callContact.isABusinessCall =
-                        contact.organization.company.isNotEmpty() && contact.getNameToDisplay().contains(contact.organization.company)
+                        contact.organization.company.isNotEmpty() && ContactNameFormatter.format(contact).contains(contact.organization.company)
                 } else {
                     callContact.name = callContact.number
                 }

@@ -3,10 +3,12 @@ package dev.chadhao.phone.adapters
 import android.view.Menu
 import android.view.ViewGroup
 import com.goodwy.commons.adapters.MyRecyclerViewAdapter
+import com.goodwy.commons.extensions.getPhoneNumberTypeText
 import com.goodwy.commons.views.MyRecyclerView
 import dev.chadhao.phone.R
 import dev.chadhao.phone.activities.SimpleActivity
 import dev.chadhao.phone.databinding.ItemSpeedDialBinding
+import dev.chadhao.phone.helpers.ContactNameFormatter
 import dev.chadhao.phone.interfaces.RemoveSpeedDialListener
 import dev.chadhao.phone.models.SpeedDial
 
@@ -69,8 +71,17 @@ class SpeedDialAdapter(
 
     private fun setupView(binding: ItemSpeedDialBinding, speedDial: SpeedDial) {
         binding.apply {
+            val formattedName = ContactNameFormatter.formatDisplayName(speedDial.displayName)
             var displayName = "${speedDial.id}. "
-            displayName += if (speedDial.isValid()) speedDial.getName(activity) else ""
+            displayName += if (speedDial.isValid()) {
+                if (speedDial.type != null && speedDial.label != null) {
+                    "$formattedName - ${activity.getPhoneNumberTypeText(speedDial.type!!, speedDial.label!!)}"
+                } else {
+                    formattedName
+                }
+            } else {
+                ""
+            }
 
             speedDialLabel.apply {
                 text = displayName

@@ -253,7 +253,7 @@ class RecentsHelper(private val context: Context) {
                 //Without this, the call history does not reflect the contact name for the contact's second and subsequent numbers
                 //TODO try again to find the contact name
                 if (!isUnknownNumber) {
-                    if (contact != null) name = contact.getNameToDisplay()
+                    if (contact != null) name = ContactNameFormatter.format(contact)
                 }
 
                 if (name.isEmpty() || name == "-1") {

@@ -19,7 +19,7 @@ libphonenumberVersion = "9.0.23"
 pinyin4j = "2.5.1"
 #Commons
 # Chad commons fork (chadhao/Android-App-Commons), foss-only
-right-commons = "afb06b3c"
+right-commons = "8b635bdf"
 badger = "1.1.22"
 androidx-lifecycle = "2.10.0"
 behavioRule = "1.0.1"

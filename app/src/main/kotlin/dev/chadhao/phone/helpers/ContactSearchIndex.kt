@@ -58,6 +58,13 @@ object ContactSearchIndex {
 
     private const val MAX_CANDIDATES = 32
 
+    /**
+     * Name matches always outrank phone-number matches (requirement: 姓名优先级 > 号码).
+     * Number scoring keeps its own 0..999 range; every name (initials/full pinyin) match
+     * is shifted far above it.
+     */
+    private const val NAME_MATCH_BONUS = 100_000
+
     private val COMPOUND_SURNAMES = setOf(
         "欧阳", "司马", "上官", "诸葛", "司徒", "夏侯", "令狐", "皇甫",
         "公孙", "长孙", "慕容", "鲜于", "宇文", "尉迟", "申屠", "独孤",
@@ -84,6 +91,107 @@ object ContactSearchIndex {
 
     /** Pinyin abbreviation (e.g. "LBW") for a contact id, if it is a Chinese name. */
     fun abbreviationFor(contactId: Int): String? = records[contactId]?.abbr?.takeIf { it.isNotEmpty() }
+
+    /**
+     * Computes character ranges of a display [name] whose pinyin initials/full syllables match [query]
+     * (letters or T9 digits). Used to paint the *matched Chinese characters* blue when the typed query
+     * does not literally appear inside the name. Returns null when the query cannot be aligned to the name.
+     *
+     * Only pure-character positions are reported: a matched Han char covers exactly itself; a matched
+     * Latin word covers the whole word. Ranges are relative to [name].
+     */
+    fun highlightRanges(name: String, query: String, isDigitsQuery: Boolean): List<IntRange>? {
+        val q = if (isDigitsQuery) query.filter { it.isDigit() } else query.lowercase()
+        if (name.isEmpty() || q.isEmpty() || name.length > 64) return null
+
+        val starts = ArrayList<Int>()
+        val ends = ArrayList<Int>()
+        val initialLetters = ArrayList<String>()
+        val fullLetters = ArrayList<String>()
+
+        var i = 0
+        while (i < name.length) {
+            val char = name[i]
+            val readings = PinyinConverter.getReadings(char)
+            if (readings.isNotEmpty()) {
+                starts.add(i)
+                ends.add(i + 1)
+                initialLetters.add(readings.first().substring(0, 1))
+                fullLetters.add(readings.first())
+                i++
+            } else if (char.isLetter()) {
+                val wordStart = i
+                val wordBuilder = StringBuilder()
+                while (i < name.length) {
+                    val current = name[i]
+                    if (PinyinConverter.isChineseChar(current)) break
+                    if (!current.isLetter()) break
+                    wordBuilder.append(current)
+                    i++
+                }
+                val word = normalizeLatinWord(wordBuilder.toString())
+                if (word.isNotEmpty()) {
+                    starts.add(wordStart)
+                    ends.add(i)
+                    initialLetters.add(word.substring(0, 1))
+                    fullLetters.add(word)
+                }
+            } else {
+                i++
+            }
+        }
+        if (initialLetters.isEmpty()) return null
+
+        val matchedPositions = matchPositions(initialLetters, fullLetters, q, isDigitsQuery) ?: return null
+        if (matchedPositions.isEmpty()) return null
+
+        // Group matched positions into character ranges of the original name.
+        val sorted = matchedPositions.distinct().sorted()
+        val ranges = ArrayList<IntRange>()
+        var index = 0
+        while (index < sorted.size) {
+            var next = index
+            while (next + 1 < sorted.size && sorted[next + 1] == sorted[next] + 1) next++
+            ranges.add(IntRange(starts[sorted[index]], ends[sorted[next]] - 1))
+            index = next + 1
+        }
+        return ranges
+    }
+
+    /**
+     * Tries initials first, then full syllables, to align [query] against the per-position letter targets.
+     * Returns the list of matched position indices (greedy, earliest-first).
+     */
+    private fun matchPositions(
+        initials: List<String>,
+        full: List<String>,
+        query: String,
+        isDigitsQuery: Boolean,
+    ): List<Int>? {
+        fun tryMode(targets: List<String>): List<Int>? {
+            val textBuilder = StringBuilder()
+            val charToPosition = ArrayList<Int>()
+            targets.forEachIndexed { position, target ->
+                for (char in target) {
+                    textBuilder.append(if (isDigitsQuery) digitForLetter(char) else char)
+                    charToPosition.add(position)
+                }
+            }
+            val text = textBuilder.toString()
+            var queryIndex = 0
+            val matched = ArrayList<Int>()
+            for (i in text.indices) {
+                if (queryIndex < query.length && text[i] == query[queryIndex]) {
+                    matched.add(charToPosition[i])
+                    queryIndex++
+                    if (queryIndex == query.length) return matched
+                }
+            }
+            return null
+        }
+
+        return tryMode(initials) ?: tryMode(full)
+    }
 
     /** Digits typed on the dialpad / a pure-digit query: matches numbers + initials/full T9. */
     fun queryDigits(query: String, contacts: List<Contact>): List<ContactMatch> =
@@ -370,6 +478,7 @@ object ContactSearchIndex {
         }
 
         if (isDigitsQuery) {
+            // Phone-number matches stay in their own low tier (below every name match).
             for (number in record.phoneDigits) {
                 scoreNumber(number, query)?.let { consider(it) }
             }
@@ -379,12 +488,12 @@ object ContactSearchIndex {
 
         for (candidate in record.initialCandidates) {
             val value = searchValue(candidate)
-            scoreInitials(value, query, record)?.let { consider(it) }
+            scoreInitials(value, query, record)?.let { consider(NAME_MATCH_BONUS + it) }
         }
 
         for (candidate in record.fullCandidates) {
             val value = searchValue(candidate)
-            scoreFull(value, query)?.let { consider(it) }
+            scoreFull(value, query)?.let { consider(NAME_MATCH_BONUS + it) }
         }
 
         return best

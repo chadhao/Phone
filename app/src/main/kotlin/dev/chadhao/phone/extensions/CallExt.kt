@@ -25,6 +25,7 @@ import dev.chadhao.phone.activities.SimpleActivity
 import dev.chadhao.phone.dialogs.SelectSIMDialog
 import dev.chadhao.phone.dialogs.SelectSimButtonDialog
 import dev.chadhao.phone.helpers.SIM_DIALOG_STYLE_LIST
+import dev.chadhao.phone.helpers.ContactNameFormatter
 
 fun SimpleActivity.startCallIntent(
     recipient: String,
@@ -61,7 +62,7 @@ fun SimpleActivity.startCallWithConfirmationCheck(contact: Contact) {
     if (config.showCallConfirmation) {
         CallConfirmationDialog(
             activity = this,
-            callee = contact.getNameToDisplay()
+            callee = ContactNameFormatter.format(contact)
         ) {
             initiateCall(contact) { launchCallIntent(it, key = BuildConfig.RIGHT_APP_KEY) }
         }

@@ -24,6 +24,7 @@ import dev.chadhao.phone.extensions.startContactDetailsIntent
 import dev.chadhao.phone.extensions.startContactDetailsIntentRecommendation
 import dev.chadhao.phone.extensions.startContactEdit
 import dev.chadhao.phone.helpers.Converters
+import dev.chadhao.phone.helpers.ContactNameFormatter
 import dev.chadhao.phone.helpers.SWIPE_ACTION_CALL
 import dev.chadhao.phone.helpers.SWIPE_ACTION_EDIT
 import dev.chadhao.phone.helpers.SWIPE_ACTION_MESSAGE
@@ -225,7 +226,7 @@ class FavoritesFragment(context: Context, attributeSet: AttributeSet) : MyViewPa
         val fixedText = text.trim().replace("\\s+".toRegex(), " ")
         val shouldNormalize = fixedText.normalizeString() == fixedText
         val contacts = allContacts.filter { contact ->
-            getProperText(contact.getNameToDisplay(), shouldNormalize).contains(fixedText, true) ||
+            getProperText(ContactNameFormatter.format(contact), shouldNormalize).contains(fixedText, true) ||
                 getProperText(contact.nickname, shouldNormalize).contains(fixedText, true) ||
                 (fixedText.toLongOrNull() != null && contact.phoneNumbers.any {
                     fixedText.normalizePhoneNumber().isNotEmpty() && it.normalizedNumber.contains(fixedText.normalizePhoneNumber(), true)

@@ -68,6 +68,7 @@ import dev.chadhao.phone.models.RecentCall
 import com.google.gson.Gson
 import dev.chadhao.phone.extensions.launchSendWhatsAppIntent
 import dev.chadhao.phone.helpers.DialpadT9
+import dev.chadhao.phone.helpers.ContactNameFormatter
 import dev.chadhao.phone.helpers.ContactSearchIndex
 import dev.chadhao.phone.helpers.FILTER_RECENT_CALLS_ALL
 import dev.chadhao.phone.helpers.FILTER_RECENT_CALLS_CONTACTS
@@ -449,7 +450,7 @@ class RecentsFragment(
         return RecentCall(
             id = -(id + 1),
             phoneNumber = number,
-            name = getNameToDisplay(),
+            name = ContactNameFormatter.format(this),
             nickname = nickname,
             company = organization.company,
             jobPosition = organization.jobPosition,
@@ -669,8 +670,8 @@ class RecentsFragment(
                 val contact = contactsWithNumbers.firstOrNull { it.phoneNumbers.first().normalizedNumber == call.phoneNumber }
 
                 when {
-                    privateContact != null -> withUpdatedName(call = call, name = privateContact.getNameToDisplay())
-                    contact != null -> withUpdatedName(call = call, name = contact.getNameToDisplay())
+                    privateContact != null -> withUpdatedName(call = call, name = ContactNameFormatter.format(privateContact))
+                    contact != null -> withUpdatedName(call = call, name = ContactNameFormatter.format(contact))
                     else -> call
                 }
             } else {

@@ -26,6 +26,7 @@ import dev.chadhao.phone.helpers.SWIPE_ACTION_EDIT
 import dev.chadhao.phone.helpers.SWIPE_ACTION_MESSAGE
 import dev.chadhao.phone.helpers.SWIPE_ACTION_OPEN
 import dev.chadhao.phone.helpers.SWIPE_ACTION_WHATSAPP
+import dev.chadhao.phone.helpers.ContactNameFormatter
 import dev.chadhao.phone.helpers.ContactSearchIndex
 import dev.chadhao.phone.interfaces.RefreshItemsListener
 
@@ -201,7 +202,6 @@ class ContactsFragment(context: Context, attributeSet: AttributeSet) : MyViewPag
         searchGeneration++
         binding.fragmentPlaceholder.beVisibleIf(allContacts.isEmpty())
         (binding.fragmentList.adapter as? ContactsAdapter)?.apply {
-            showSearchPinyinAbbr = false
             updateItems(allContacts)
         }
         setupLetterFastScroller(allContacts)
@@ -214,7 +214,6 @@ class ContactsFragment(context: Context, attributeSet: AttributeSet) : MyViewPag
         if (fixedText.isEmpty()) {
             binding.fragmentPlaceholder.beVisibleIf(allContacts.isEmpty())
             (binding.fragmentList.adapter as? ContactsAdapter)?.apply {
-                showSearchPinyinAbbr = false
                 updateItems(allContacts)
             }
             setupLetterFastScroller(allContacts)
@@ -226,7 +225,7 @@ class ContactsFragment(context: Context, attributeSet: AttributeSet) : MyViewPag
 
             // Existing textual (contains) search keeps nickname/company/email/... fields searchable.
             val textMatches = allContacts.filter { contact ->
-                getProperText(contact.getNameToDisplay(), shouldNormalize).contains(fixedText, true) ||
+                getProperText(ContactNameFormatter.format(contact), shouldNormalize).contains(fixedText, true) ||
                     getProperText(contact.nickname, shouldNormalize).contains(fixedText, true) ||
                     (fixedText.toLongOrNull() != null && contact.doesContainPhoneNumber(fixedText, true)) ||
                     contact.emails.any { it.value.contains(fixedText, true) } ||
@@ -261,10 +260,10 @@ class ContactsFragment(context: Context, attributeSet: AttributeSet) : MyViewPag
             val filtered = merged.values.sortedWith(
                 compareByDescending<Contact> { idToScore[it.id] ?: -1 }
                     .thenByDescending {
-                        getProperText(it.getNameToDisplay(), shouldNormalize).startsWith(fixedText, true)
+                        getProperText(ContactNameFormatter.format(it), shouldNormalize).startsWith(fixedText, true)
                     }
                     .thenByDescending {
-                        getProperText(it.getNameToDisplay(), shouldNormalize).contains(fixedText, true)
+                        getProperText(ContactNameFormatter.format(it), shouldNormalize).contains(fixedText, true)
                     }
                     .thenBy { allContacts.indexOf(it) }
             )
@@ -273,7 +272,6 @@ class ContactsFragment(context: Context, attributeSet: AttributeSet) : MyViewPag
                 if (generation != searchGeneration) return@runOnUiThread
                 binding.fragmentPlaceholder.beVisibleIf(filtered.isEmpty())
                 (binding.fragmentList.adapter as? ContactsAdapter)?.apply {
-                    showSearchPinyinAbbr = indexMatches.isNotEmpty()
                     updateItems(filtered, fixedText)
                 }
                 setupLetterFastScroller(ArrayList(filtered))
