@@ -10,7 +10,6 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import com.goodwy.commons.RightApp
 import com.goodwy.commons.extensions.notificationManager
 import com.goodwy.commons.extensions.showErrorToast
-import com.goodwy.commons.helpers.PurchaseHelper
 import dev.chadhao.phone.extensions.*
 import dev.chadhao.phone.models.TimerEvent
 import dev.chadhao.phone.models.TimerState
@@ -29,7 +28,6 @@ class App : RightApp(), LifecycleObserver {
         super.onCreate()
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
         EventBus.getDefault().register(this)
-        PurchaseHelper().initPurchaseIfNeed(this, "309929407")
     }
 
     override fun onTerminate() {

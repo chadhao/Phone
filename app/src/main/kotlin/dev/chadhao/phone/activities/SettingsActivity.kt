@@ -24,8 +24,6 @@ import dev.chadhao.phone.helpers.RecentsHelper
 import dev.chadhao.phone.models.RecentCall
 import dev.chadhao.phone.helpers.*
 import com.google.gson.Gson
-import com.mikhaellopez.rxanimation.RxAnimation
-import com.mikhaellopez.rxanimation.shake
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import java.util.Calendar
@@ -63,16 +61,6 @@ class SettingsActivity : SimpleActivity() {
         }
     }
 
-    private val productIdX1 = BuildConfig.PRODUCT_ID_X1
-    private val productIdX2 = BuildConfig.PRODUCT_ID_X2
-    private val productIdX3 = BuildConfig.PRODUCT_ID_X3
-    private val subscriptionIdX1 = BuildConfig.SUBSCRIPTION_ID_X1
-    private val subscriptionIdX2 = BuildConfig.SUBSCRIPTION_ID_X2
-    private val subscriptionIdX3 = BuildConfig.SUBSCRIPTION_ID_X3
-    private val subscriptionYearIdX1 = BuildConfig.SUBSCRIPTION_YEAR_ID_X1
-    private val subscriptionYearIdX2 = BuildConfig.SUBSCRIPTION_YEAR_ID_X2
-    private val subscriptionYearIdX3 = BuildConfig.SUBSCRIPTION_YEAR_ID_X3
-
     override fun onCreate(savedInstanceState: Bundle?) {
         useOverflowIcon = false
         super.onCreate(savedInstanceState)
@@ -81,34 +69,11 @@ class SettingsActivity : SimpleActivity() {
 
 //        setupEdgeToEdge(padBottomSystem = listOf(settingsNestedScrollview))
         setupMaterialScrollListener(binding.settingsNestedScrollview, binding.settingsAppbar)
-
-        val iapList: ArrayList<String> = arrayListOf(productIdX1, productIdX2, productIdX3)
-        val subList: ArrayList<String> =
-            arrayListOf(
-                subscriptionIdX1, subscriptionIdX2, subscriptionIdX3,
-                subscriptionYearIdX1, subscriptionYearIdX2, subscriptionYearIdX3
-            )
-        val ruStoreList: ArrayList<String> =
-            arrayListOf(
-                productIdX1, productIdX2, productIdX3,
-                subscriptionIdX1, subscriptionIdX2, subscriptionIdX3,
-                subscriptionYearIdX1, subscriptionYearIdX2, subscriptionYearIdX3
-            )
-        PurchaseHelper().checkPurchase(
-            this@SettingsActivity,
-            iapList = iapList,
-            subList = subList,
-            ruStoreList = ruStoreList
-        ) { updatePro ->
-            if (updatePro) updatePro()
-        }
     }
 
     override fun onResume() {
         super.onResume()
         setupTopAppBar(binding.settingsAppbar, NavigationIcon.Arrow)
-
-        setupPurchaseThankYou()
 
         setupCustomizeColors()
         setupOverflowIcon()
@@ -196,7 +161,6 @@ class SettingsActivity : SimpleActivity() {
         setupCallsExport()
         setupCallsImport()
 
-        setupTipJar()
         setupAbout()
 
         updateTextColors(binding.settingsHolder)
@@ -247,31 +211,10 @@ class SettingsActivity : SimpleActivity() {
                 settingsImportCallsChevron,
                 settingsManageBlockedNumbersChevron,
                 settingsManageSpeedDialChevron,
-                settingsTipJarChevron,
                 settingsAboutChevron,
                 settingsDialpadStyleChevron
             ).forEach {
                 it.applyColorFilter(properTextColor)
-            }
-        }
-    }
-
-    private fun updatePro(isPro: Boolean = checkPro()) {
-        binding.apply {
-            settingsPurchaseThankYouHolder.beGoneIf(isPro)
-            settingsTipJarHolder.beVisibleIf(isPro)
-
-            val stringId =
-                if (isRTLLayout) com.goodwy.strings.R.string.swipe_right_action
-                else com.goodwy.strings.R.string.swipe_left_action
-            settingsSwipeLeftActionLabel.text = addLockedLabelIfNeeded(stringId, isPro)
-
-            arrayOf(
-                settingsSimCardColor1Holder,
-                settingsSimCardColor2Holder,
-                settingsSwipeLeftActionHolder
-            ).forEach {
-                it.alpha = if (isPro) 1f else 0.4f
             }
         }
     }
@@ -300,24 +243,9 @@ class SettingsActivity : SimpleActivity() {
         }
     }
 
-    private fun setupPurchaseThankYou() = binding.apply {
-        settingsPurchaseThankYouHolder.beGoneIf(checkPro(false))
-        settingsPurchaseThankYouHolder.onClick = { launchPurchase() }
-    }
-
     private fun setupCustomizeColors() {
         binding.settingsCustomizeColorsHolder.setOnClickListener {
-            startCustomizationActivity(
-                showAccentColor = true,
-                isCollection = isOrWasThankYouInstalled(false) || isCollection(),
-                productIdList = arrayListOf(productIdX1, productIdX2, productIdX3),
-                productIdListRu = arrayListOf(productIdX1, productIdX2, productIdX3),
-                subscriptionIdList = arrayListOf(subscriptionIdX1, subscriptionIdX2, subscriptionIdX3),
-                subscriptionIdListRu = arrayListOf(subscriptionIdX1, subscriptionIdX2, subscriptionIdX3),
-                subscriptionYearIdList = arrayListOf(subscriptionYearIdX1, subscriptionYearIdX2, subscriptionYearIdX3),
-                subscriptionYearIdListRu = arrayListOf(subscriptionYearIdX1, subscriptionYearIdX2, subscriptionYearIdX3),
-                showAppIconColor = true
-            )
+            startCustomizationActivity(showAccentColor = true, showAppIconColor = true)
         }
     }
 
@@ -609,12 +537,6 @@ class SettingsActivity : SimpleActivity() {
                     settingsContactThumbnailsSize.text = getContactThumbnailsSizeText()
                     config.needRestart = true
                 }
-            } else {
-                RxAnimation.from(settingsContactThumbnailsSizeHolder)
-                    .shake(shakeTranslation = 2f)
-                    .subscribe()
-
-                showSnackbar(binding.root)
             }
         }
     }
@@ -753,12 +675,6 @@ class SettingsActivity : SimpleActivity() {
                     if (pro) {
                         config.backgroundCallScreen = it
                         binding.settingsBackgroundCallScreen.text = getBackgroundCallScreenText()
-                    } else {
-                        RxAnimation.from(binding.settingsBackgroundCallScreenHolder)
-                            .shake(shakeTranslation = 2f)
-                            .subscribe()
-
-                        showSnackbar(binding.root)
                     }
                 } else {
                     config.backgroundCallScreen = it
@@ -873,16 +789,8 @@ class SettingsActivity : SimpleActivity() {
             defaultItemId = ANSWER_SLIDER
         ) {
             if (it as Int == ANSWER_SLIDER_OUTLINE || it == ANSWER_SLIDER_VERTICAL) {
-                if (pro) {
-                    config.sliderStyle = it
-                    binding.settingsSliderStyle.text = getSliderStyleText()
-                } else {
-                    RxAnimation.from(binding.settingsSliderStyleHolder)
-                        .shake(shakeTranslation = 2f)
-                        .subscribe()
-
-                    showSnackbar(binding.root)
-                }
+                config.sliderStyle = it
+                binding.settingsSliderStyle.text = getSliderStyleText()
             } else {
                 config.sliderStyle = it
                 binding.settingsSliderStyle.text = getSliderStyleText()
@@ -919,16 +827,8 @@ class SettingsActivity : SimpleActivity() {
 
         RadioGroupIconDialog(this@SettingsActivity, items, config.callButtonStyle, R.string.call_button_style) {
             if (it as Int == IOS17) {
-                if (pro) {
-                    config.callButtonStyle = it
-                    binding.settingsCallButtonStyle.text = getCallButtonStyleText()
-                } else {
-                    RxAnimation.from(binding.settingsCallButtonStyleHolder)
-                        .shake(shakeTranslation = 2f)
-                        .subscribe()
-
-                    showSnackbar(binding.root)
-                }
+                config.callButtonStyle = it
+                binding.settingsCallButtonStyle.text = getCallButtonStyleText()
             } else {
                 config.callButtonStyle = it
                 binding.settingsCallButtonStyle.text = getCallButtonStyleText()
@@ -1505,23 +1405,6 @@ class SettingsActivity : SimpleActivity() {
                         }
                     }
                 }
-            } else {
-                arrayOf(
-                    settingsSimCardColor1Holder,
-                    settingsSimCardColor2Holder
-                ).forEach {
-                    it.setOnClickListener { view ->
-                        RxAnimation.from(binding.settingsPurchaseThankYouHolder)
-                            .shake()
-                            .subscribe()
-
-                        RxAnimation.from(view)
-                            .shake(shakeTranslation = 2f)
-                            .subscribe()
-
-                        showSnackbar(binding.root)
-                    }
-                }
             }
         }
     }
@@ -1849,12 +1732,6 @@ class SettingsActivity : SimpleActivity() {
                         config.swipeLeftAction == SWIPE_ACTION_DELETE || config.swipeRightAction == SWIPE_ACTION_DELETE
                     )
                 }
-            } else {
-                RxAnimation.from(settingsSwipeLeftActionHolder)
-                    .shake(shakeTranslation = 2f)
-                    .subscribe()
-
-                showSnackbar(binding.root)
             }
         }
     }
@@ -1877,16 +1754,6 @@ class SettingsActivity : SimpleActivity() {
             settingsSkipDeleteConfirmationHolder.setOnClickListener {
                 settingsSkipDeleteConfirmation.toggle()
                 config.skipDeleteConfirmation = settingsSkipDeleteConfirmation.isChecked
-            }
-        }
-    }
-
-    private fun setupTipJar() = binding.apply {
-        settingsTipJarHolder.apply {
-            beVisibleIf(checkPro(false))
-            background.applyColorFilter(getColoredMaterialStatusBarColor().lightenColor(4))
-            setOnClickListener {
-                launchPurchase()
             }
         }
     }

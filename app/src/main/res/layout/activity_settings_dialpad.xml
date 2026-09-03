@@ -35,12 +35,6 @@
             android:orientation="vertical"
             android:layout_alignParentBottom="true">
 
-            <com.goodwy.commons.views.PurchaseThankYouItem
-                android:id="@+id/dialpadPurchaseThankYouHolder"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/medium_margin"/>
-
             <androidx.cardview.widget.CardView
                 android:id="@+id/styleHolder"
                 style="@style/SettingsSectionHolder"

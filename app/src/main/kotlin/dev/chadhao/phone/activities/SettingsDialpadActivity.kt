@@ -24,7 +24,6 @@ import com.goodwy.commons.dialogs.RadioGroupIconDialog
 import com.goodwy.commons.extensions.*
 import com.goodwy.commons.helpers.*
 import com.goodwy.commons.models.RadioItem
-import dev.chadhao.phone.BuildConfig
 import dev.chadhao.phone.R
 import dev.chadhao.phone.databinding.ActivitySettingsDialpadBinding
 import dev.chadhao.phone.extensions.*
@@ -32,8 +31,6 @@ import dev.chadhao.phone.helpers.*
 import dev.chadhao.phone.models.RecentCall
 import dev.chadhao.phone.models.SpeedDial
 import com.google.gson.Gson
-import com.mikhaellopez.rxanimation.RxAnimation
-import com.mikhaellopez.rxanimation.shake
 import me.grantland.widget.AutofitHelper
 import java.io.InputStreamReader
 import java.util.*
@@ -42,16 +39,6 @@ import kotlin.math.abs
 class SettingsDialpadActivity : SimpleActivity() {
 
     private val binding by viewBinding(ActivitySettingsDialpadBinding::inflate)
-
-    private val productIdX1 = BuildConfig.PRODUCT_ID_X1
-    private val productIdX2 = BuildConfig.PRODUCT_ID_X2
-    private val productIdX3 = BuildConfig.PRODUCT_ID_X3
-    private val subscriptionIdX1 = BuildConfig.SUBSCRIPTION_ID_X1
-    private val subscriptionIdX2 = BuildConfig.SUBSCRIPTION_ID_X2
-    private val subscriptionIdX3 = BuildConfig.SUBSCRIPTION_ID_X3
-    private val subscriptionYearIdX1 = BuildConfig.SUBSCRIPTION_YEAR_ID_X1
-    private val subscriptionYearIdX2 = BuildConfig.SUBSCRIPTION_YEAR_ID_X2
-    private val subscriptionYearIdX3 = BuildConfig.SUBSCRIPTION_YEAR_ID_X3
 
     private var speedDialValues = ArrayList<SpeedDial>()
     private var privateCursor: Cursor? = null
@@ -156,8 +143,6 @@ class SettingsDialpadActivity : SimpleActivity() {
             }
         }
 
-        setupPurchaseThankYou()
-
 //        setupDialpadStyle()
         setupPrimarySimCard()
         setupButtonsColorList()
@@ -176,27 +161,6 @@ class SettingsDialpadActivity : SimpleActivity() {
         setupDialpadSize()
         setupDialpadBottomMargin()
         setupButtonSize()
-
-        val iapList: ArrayList<String> = arrayListOf(productIdX1, productIdX2, productIdX3)
-        val subList: ArrayList<String> =
-            arrayListOf(
-                subscriptionIdX1, subscriptionIdX2, subscriptionIdX3,
-                subscriptionYearIdX1, subscriptionYearIdX2, subscriptionYearIdX3
-            )
-        val ruStoreList: ArrayList<String> =
-            arrayListOf(
-                productIdX1, productIdX2, productIdX3,
-                subscriptionIdX1, subscriptionIdX2, subscriptionIdX3,
-                subscriptionYearIdX1, subscriptionYearIdX2, subscriptionYearIdX3
-            )
-        PurchaseHelper().checkPurchase(
-            this@SettingsDialpadActivity,
-            iapList = iapList,
-            subList = subList,
-            ruStoreList = ruStoreList
-        ) { updatePro ->
-            if (updatePro) updatePro()
-        }
     }
 
     override fun onRestart() {
@@ -831,21 +795,6 @@ class SettingsDialpadActivity : SimpleActivity() {
                         }
                     }
                 }
-            } else {
-                arrayOf(
-                    settingsSimCardColor1Holder,
-                    settingsSimCardColor2Holder
-                ).forEach {
-                    it.setOnClickListener { view ->
-                        shakePurchase()
-
-                        RxAnimation.from(view)
-                            .shake(shakeTranslation = 2f)
-                            .subscribe()
-
-                        showSnackbar(binding.root)
-                    }
-                }
             }
 
             settingsDialpadButtonColorHolder.setOnClickListener {
@@ -1208,30 +1157,6 @@ class SettingsDialpadActivity : SimpleActivity() {
                 }
             })
         }
-    }
-
-    private fun setupPurchaseThankYou() {
-        updatePro()
-        binding.dialpadPurchaseThankYouHolder.onClick = { launchPurchase() }
-    }
-
-    private fun updatePro(isPro: Boolean = checkPro()) {
-        binding.apply {
-            dialpadPurchaseThankYouHolder.beGoneIf(checkPro(false))
-
-            arrayOf(
-                settingsSimCardColor1Holder,
-                settingsSimCardColor2Holder
-            ).forEach {
-                it.alpha = if (isPro) 1f else 0.4f
-            }
-        }
-    }
-
-    private fun shakePurchase() {
-        RxAnimation.from(binding.dialpadPurchaseThankYouHolder)
-            .shake()
-            .subscribe()
     }
 
     private fun checkPro(collection: Boolean = resources.getBoolean(R.bool.show_collection)) =
