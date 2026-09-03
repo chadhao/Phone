@@ -72,34 +72,6 @@ jobs:
         if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
         run: ./gradlew assembleRelease --no-daemon 2>&1 | tee /tmp/gradle-release.log
 
-      # 构建失败时:上传 Gradle 日志为 artifact,并把错误摘要写入 commit status(匿名可读,便于无 token 排查)
-      - name: Publish failure log artifact
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gradle-build-log
-          path: /tmp/gradle-*.log
-          if-no-files-found: ignore
-
-      - name: Report failure summary as commit status
-        if: failure()
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          DESC=""
-          if [ -f /tmp/stage-diag.txt ]; then
-            DESC=$(tail -c 600 /tmp/stage-diag.txt | tr '\n' ' ' | tr -s ' ' | cut -c1-130)
-          elif LOG=$(ls /tmp/gradle-*.log 2>/dev/null | head -1); then
-            DESC=$(grep -m1 -A3 -E "FAILURE|What went wrong|Caused by|error:|Exception" "$LOG" | head -6 | tr '\n' ' ' | cut -c1-130)
-          fi
-          if [ -n "$DESC" ]; then
-            gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
-              -f state=failure -f context="android-build-log" \
-              -f description="$DESC" >/dev/null 2>&1 || true
-          fi
-          exit 0
-
       # AGP 9 产物目录与旧版不同:先 workspace 级搜索 APK/AAB 并拷贝到统一目录再上传。
       # 找不到产物时:打印目录树与全盘搜索结果(含 runner 临时目录),并让 job 失败——禁止空包静默通过。
       - name: Stage APK/AAB for upload
@@ -159,3 +131,34 @@ jobs:
           # --generate-notes 由 gh 依据 commit/PR 自动生成;失败时降级为纯文件发布
           gh release create "$GITHUB_REF_NAME" *.apk *.aab --generate-notes || \
             gh release create "$GITHUB_REF_NAME" *.apk *.aab
+
+      # 任意步骤失败后的统一上报(置于末尾,failure 时才触发):上传 Gradle 日志/staging 诊断为 artifact,并尝试写 commit status
+      - name: Publish failure diagnostics artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: |
+            /tmp/gradle-*.log
+            /tmp/stage-diag.txt
+            /tmp/apk-paths.txt
+          if-no-files-found: ignore
+
+      - name: Report failure summary as commit status
+        if: failure()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          DESC=""
+          if [ -f /tmp/stage-diag.txt ]; then
+            DESC=$(tail -c 600 /tmp/stage-diag.txt | tr '\n' ' ' | tr -s ' ' | cut -c1-130)
+          elif LOG=$(ls /tmp/gradle-*.log 2>/dev/null | head -1); then
+            DESC=$(grep -m1 -A3 -E "FAILURE|What went wrong|Caused by|error:|Exception" "$LOG" | head -6 | tr '\n' ' ' | cut -c1-130)
+          fi
+          if [ -n "$DESC" ]; then
+            gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+              -f state=failure -f context="android-build-log" \
+              -f description="$DESC" >/dev/null 2>&1 || true
+          fi
+          exit 0
