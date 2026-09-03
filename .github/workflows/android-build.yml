@@ -66,6 +66,7 @@ jobs:
       - name: Build debug APK (foss) + stage artifact
         if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' }}
         run: |
+          set -o pipefail
           ./gradlew assembleFossDebug --no-daemon 2>&1 | tee /tmp/gradle-debug.log
           echo "PWD=$(pwd)"
           mkdir -p /tmp/apk
@@ -91,6 +92,7 @@ jobs:
       - name: Build release APK (foss) + stage artifact
         if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
         run: |
+          set -o pipefail
           ./gradlew assembleRelease --no-daemon 2>&1 | tee /tmp/gradle-release.log
           mkdir -p /tmp/apk
           find . -path ./.git -prune -o -type f \( -name '*.apk' -o -name '*.aab' \) -print > /tmp/apk-paths.txt
