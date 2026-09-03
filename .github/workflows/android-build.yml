@@ -122,22 +122,22 @@ jobs:
           LOG=/tmp/gradle-debug.log
           if [ -f /tmp/gradle-release.log ]; then LOG=/tmp/gradle-release.log; fi
           python3 - "$LOG" <<'PY'
-import json, os, sys, urllib.request
-raw = open(sys.argv[1], encoding='utf-8', errors='replace').read()
-tail = raw[-20000:]
-idx = tail.rfind('FAILURE')
-seg = tail[idx:] if idx >= 0 else tail
-body = '### Android CI failed\n\n```text\n' + seg + '\n```'
-req = urllib.request.Request(
-    'https://api.github.com/repos/' + os.environ['GITHUB_REPOSITORY']
-    + '/commits/' + os.environ['GITHUB_SHA'] + '/comments',
-    data=json.dumps({'body': body}).encode(),
-    method='POST',
-    headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
-             'Accept': 'application/vnd.github+json',
-             'Content-Type': 'application/json'})
-print('commit comment status:', urllib.request.urlopen(req).status)
-PY
+          import json, os, sys, urllib.request
+          raw = open(sys.argv[1], encoding='utf-8', errors='replace').read()
+          tail = raw[-20000:]
+          idx = tail.rfind('FAILURE')
+          seg = tail[idx:] if idx >= 0 else tail
+          body = '### Android CI failed\n\n```text\n' + seg + '\n```'
+          req = urllib.request.Request(
+              'https://api.github.com/repos/' + os.environ['GITHUB_REPOSITORY']
+              + '/commits/' + os.environ['GITHUB_SHA'] + '/comments',
+              data=json.dumps({'body': body}).encode(),
+              method='POST',
+              headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                       'Accept': 'application/vnd.github+json',
+                       'Content-Type': 'application/json'})
+          print('commit comment status:', urllib.request.urlopen(req).status)
+          PY
 
       - name: Upload debug APK artifact
         if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' }}
