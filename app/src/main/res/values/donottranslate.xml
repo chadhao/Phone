@@ -1,6 +1,6 @@
 <resources>
     <string name="package_name">dev.chadhao.phone</string>
-    <string name="app_name">AlRight Phone</string>
+    <string name="app_name">Chad Phone</string>
 
     <!-- Release notes --><!-- TODO changelog -->
     <string name="release_840">

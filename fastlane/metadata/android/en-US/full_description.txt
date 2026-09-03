@@ -1,19 +1,9 @@
-Your Privacy is Non-Negotiable
-Unlike mainstream dialers, AlRight Phone is built on a simple principle: your data belongs only to you. We do not collect, sell, or analyze your call history, contacts, or any personal information. What happens on your phone, stays on your phone.
+Chad Phone is a personal build of Right Dialer, stripped to essentials for self use.
 
-Key Features:
+Key features:
+- Full-featured call management: dialer, call history, favorites, speed dial and contacts.
+- Appearance customization: colors, themes, dialpad styles, slider styles, SIM colors and more.
+- Blocked-call support and quick-settings tile.
+- No ads, no tracking, no in-app purchases.
 
-🛡️ 100% Private & Open Source: Every line of code is transparent and verifiable. Trust is built on proof.
-
-🚫 No Ads, No Tracking: Enjoy a clean, focused calling experience without hidden costs or surveillance.
-
-🎨 Fully Customizable Interface: Don't like the default look? Change it! Choose your own colors, themes, and layouts to create the perfect dialer for you.
-
-📞 Essential Call Management: blacklist, call history, and favorites.
-
-⚡ Lightweight & Efficient: Respects your device's battery and resources.
-
-Why Choose AlRight Phone?
-If you're tired of dialers that feel like data harvesters, this app is for you. It's a straightforward, powerful tool that does one job exceptionally well: making calls while fiercely protecting your digital footprint.
-
-Download AlRight Phone today and take back control of your most basic communication.
+Based on Simple Dialer, Right Dialer and Fossify Phone.

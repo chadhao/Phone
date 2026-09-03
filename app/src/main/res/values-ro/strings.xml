@@ -67,6 +67,5 @@
     <string name="export_call_history">Exportă istoricul apelurilor</string>
     <string name="import_call_history">Importă istoricul apelurilor</string>
     <string name="audio_route_bluetooth">Bluetooth</string>
-    <string name="app_launcher_name">Telefon</string>
     <string name="hashtag">Diez</string>
 </resources>

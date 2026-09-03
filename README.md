@@ -2,24 +2,17 @@
 
 <img src="app/src/main/res/drawable/ic_launcher.png" width="120" alt="App icon"/>
 
-# AlRight Phone
-<a href='https://play.google.com/store/apps/details?id=dev.chadhao.phone'><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png' height=80/></a>
+# Chad Phone
+
 </div>
 
-A copy of our Right Dialer app, which has a number of differences:<br>
- - a wide selection of background colors instead of preset colors<br>
- - the dial pad is now part of the recent calls list instead of a separate screen<br>
- - different dial pad buttons<br>
- - changed behavior of the call answer slider; the slider only appears when the screen is locked or turned off; in other cases, there will be answer buttons or a notification. <br><br>
+A personal self-use build of the Right Dialer app for Android, rebranded and stripped of the Goodwy ecosystem, in-app purchases and non-FOSS flavors.
 
-## ☕ Support the Project
-
-If you find **AlRight Phone** useful and would like to support its development, consider
-buying me a coffee! Your support helps me maintain and improve this project.
-
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/goodwy)
-
-*Every contribution, no matter how small, helps keep this project alive and growing! ❤️*<br><br><br>
-
+Differences from the upstream app:
+ - application id / namespace `dev.chadhao.phone`, display name **Chad Phone**
+ - FOSS-only build (`commons-foss`), no Google Play / RuStore / HMS billing
+ - all Pro-locked appearance settings are directly available
+ - Goodwy ecosystem queries, recommendations and analytics removed
+ - only the default (English) and Chinese locale names kept
 
 *Based on [Simple Dialer](https://github.com/SimpleMobileTools/Simple-Dialer), [Right Dialer](https://github.com/Goodwy/Dialer), [Fossify Phone](https://github.com/FossifyOrg/Phone).*

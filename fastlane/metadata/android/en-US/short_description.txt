@@ -1,1 +1,1 @@
-An open-source calling app designed for those who value privacy above all else.
+A private, self-use phone dialer based on Right Dialer / Simple Dialer. No ads, no tracking, no in-app purchases.
