@@ -52,7 +52,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Accept Android SDK licenses
-        run: yes | sdkmanager --licenses >/dev/null 2>&1 || true
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "platforms;android-37" >/dev/null 2>&1 || true
 
       # 仅当签名 Secret 齐全时解码 keystore,并在步骤级注入 SIGNING_* 供 Gradle 读取
       - name: Decode signing keystore

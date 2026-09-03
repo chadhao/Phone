@@ -1,17 +1,17 @@
 [versions]
 #jetbrains
 geocoderVersion = "3.23"
-kotlin = "2.3.10"
+kotlin = "2.3.20"
 kotlinxSerializationJson = "1.10.0"
 #KSP
-ksp = "2.3.5"
+ksp = "2.3.9"
 #Detekt
 detekt = "1.23.8"
 detektCompose = "0.4.28"
 #Eventbus
 eventbus = "3.3.1"
 #Gradle
-gradlePlugins-agp = "9.0.0"
+gradlePlugins-agp = "9.2.0"
 #Other
 indicatorFastScroll = "fe6ddbc316"
 autofitTextView = "0.2.1"
@@ -28,8 +28,8 @@ rxJava3 = "3.1.5"
 room = "2.8.4"
 swipeToActionLayout = "0f7632fc36"
 #build
-app-build-compileSDKVersion = "36"
-app-build-targetSDK = "36"
+app-build-compileSDKVersion = "37"
+app-build-targetSDK = "37"
 app-build-minimumSDK = "26"
 app-build-javaVersion = "VERSION_17"
 app-build-kotlinJVMTarget = "17"
