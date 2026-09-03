@@ -1,0 +1,130 @@
+# Android CI/CD for AlRight Phone (chadhao/Phone)
+#
+# 触发策略:
+#   - push / PR 到 main        -> 快速验证(构建 gplay debug APK)
+#   - 打 tag v* (如 v8.4.0)    -> 构建全部渠道 release APK,并发布到 GitHub Release
+#   - 手动 workflow_dispatch   -> 构建全部渠道 release APK,上传为 artifact
+#
+# Release 签名(可选):在仓库 Settings -> Secrets and variables -> Actions 配置以下 Secret,
+# 配置齐全后 release 构建将自动签名;不配置则产出 unsigned APK。
+#   SIGNING_KEYSTORE_BASE64  : keystore 文件的 base64 内容(本地可用 `base64 -w0 keystore.jks` 生成)
+#   SIGNING_STORE_FILE       : keystore 在 runner 上的相对路径,例如 keystore.jks
+#   SIGNING_STORE_PASSWORD   : keystore 密码
+#   SIGNING_KEY_ALIAS        : key 别名
+#   SIGNING_KEY_PASSWORD     : key 密码
+#
+# 内购/权益字段(可选,缺省为空字符串,不影响编译):
+#   RIGHT_APP_KEY
+#   PRODUCT_ID_X1 / PRODUCT_ID_X2 / PRODUCT_ID_X3
+#   SUBSCRIPTION_ID_X1 / X2 / X3
+#   SUBSCRIPTION_YEAR_ID_X1 / X2 / X3
+
+name: Android Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build APKs
+    runs-on: ubuntu-latest
+
+    env:
+      # --- Release 签名(来自 GitHub Secrets,未配置则为空) ---
+      SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+      SIGNING_STORE_FILE: ${{ secrets.SIGNING_STORE_FILE }}
+      SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+      SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+      SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+      # --- 内购/权益字段(来自 GitHub Secrets,未配置则为空) ---
+      RIGHT_APP_KEY: ${{ secrets.RIGHT_APP_KEY }}
+      PRODUCT_ID_X1: ${{ secrets.PRODUCT_ID_X1 }}
+      PRODUCT_ID_X2: ${{ secrets.PRODUCT_ID_X2 }}
+      PRODUCT_ID_X3: ${{ secrets.PRODUCT_ID_X3 }}
+      SUBSCRIPTION_ID_X1: ${{ secrets.SUBSCRIPTION_ID_X1 }}
+      SUBSCRIPTION_ID_X2: ${{ secrets.SUBSCRIPTION_ID_X2 }}
+      SUBSCRIPTION_ID_X3: ${{ secrets.SUBSCRIPTION_ID_X3 }}
+      SUBSCRIPTION_YEAR_ID_X1: ${{ secrets.SUBSCRIPTION_YEAR_ID_X1 }}
+      SUBSCRIPTION_YEAR_ID_X2: ${{ secrets.SUBSCRIPTION_YEAR_ID_X2 }}
+      SUBSCRIPTION_YEAR_ID_X3: ${{ secrets.SUBSCRIPTION_YEAR_ID_X3 }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses >/dev/null 2>&1 || true
+
+      # build.gradle.kts 会无条件读取 local.properties;缺失则配置阶段直接失败。
+      # CI 上 AGP 通过 ANDROID_HOME 定位 SDK,这里只需补齐内购字段(缺省为空)。
+      - name: Generate local.properties
+        run: |
+          {
+            echo "RIGHT_APP_KEY=${RIGHT_APP_KEY}"
+            echo "PRODUCT_ID_X1=${PRODUCT_ID_X1}"
+            echo "PRODUCT_ID_X2=${PRODUCT_ID_X2}"
+            echo "PRODUCT_ID_X3=${PRODUCT_ID_X3}"
+            echo "SUBSCRIPTION_ID_X1=${SUBSCRIPTION_ID_X1}"
+            echo "SUBSCRIPTION_ID_X2=${SUBSCRIPTION_ID_X2}"
+            echo "SUBSCRIPTION_ID_X3=${SUBSCRIPTION_ID_X3}"
+            echo "SUBSCRIPTION_YEAR_ID_X1=${SUBSCRIPTION_YEAR_ID_X1}"
+            echo "SUBSCRIPTION_YEAR_ID_X2=${SUBSCRIPTION_YEAR_ID_X2}"
+            echo "SUBSCRIPTION_YEAR_ID_X3=${SUBSCRIPTION_YEAR_ID_X3}"
+          } > local.properties
+          echo "local.properties generated ($(wc -l < local.properties) lines)"
+
+      # 仅当签名 Secret 齐全时解码 keystore,并在步骤级注入 SIGNING_* 供 Gradle 读取
+      - name: Decode signing keystore
+        if: env.SIGNING_KEYSTORE_BASE64 != '' && env.SIGNING_STORE_FILE != '' && env.SIGNING_STORE_PASSWORD != '' && env.SIGNING_KEY_ALIAS != '' && env.SIGNING_KEY_PASSWORD != ''
+        run: |
+          echo "$SIGNING_KEYSTORE_BASE64" | base64 -d > "$SIGNING_STORE_FILE"
+          echo "Keystore decoded to $SIGNING_STORE_FILE"
+
+      # 常规 push / PR:只构建 gplay debug,快速验证可编译
+      - name: Build debug APK (gplay)
+        if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' }}
+        run: ./gradlew assembleGplayDebug --no-daemon
+
+      # tag 或手动触发:构建全部 4 个渠道 release(minify + 签名/未签名)
+      - name: Build release APKs (all flavors)
+        if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Upload debug APK artifact
+        if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-apk
+          path: app/build/outputs/apk/gplay/debug/*.apk
+          if-no-files-found: error
+
+      - name: Upload release APKs artifact
+        if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apks
+          path: app/build/outputs/apk/*/release/*.apk
+          if-no-files-found: error
+
+      # 打 tag 时同步发布 GitHub Release(携带全部渠道 release APK)
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd app/build/outputs/apk
+          gh release create "$GITHUB_REF_NAME" */release/*.apk --generate-notes
