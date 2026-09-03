@@ -16,6 +16,7 @@ gradlePlugins-agp = "9.0.0"
 indicatorFastScroll = "fe6ddbc316"
 autofitTextView = "0.2.1"
 libphonenumberVersion = "9.0.23"
+pinyin4j = "2.5.1"
 #Commons
 # Chad commons fork (chadhao/Android-App-Commons), foss-only
 right-commons = "afb06b3c"
@@ -44,6 +45,7 @@ indicator-fast-scroll = { module = "com.github.goodwy:IndicatorFastScroll", vers
 autofit-text-view = { module = "me.grantland:autofittextview", version.ref = "autofitTextView" }
 geocoder = { module = "com.googlecode.libphonenumber:geocoder", version.ref = "geocoderVersion" }
 libphonenumber = { module = "com.googlecode.libphonenumber:libphonenumber", version.ref = "libphonenumberVersion" }
+pinyin4j = { module = "com.belerweb:pinyin4j", version.ref = "pinyin4j" }
 #Commons (Chad fork)
 goodwy-commons-foss = { module = "com.github.chadhao.android-app-commons:commons-foss", version.ref = "right-commons" }
 shortcut-badger = { module = "me.leolin:ShortcutBadger", version.ref = "badger" }
