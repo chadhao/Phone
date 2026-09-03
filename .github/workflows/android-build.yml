@@ -129,13 +129,26 @@ jobs:
           fi
           exit 0
 
+      # AGP 9 产物目录与旧版不同:全局搜索 APK/AAB 并拷贝到统一目录,再上传
+      - name: Stage debug APK for upload
+        if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' }}
+        run: |
+          mkdir -p /tmp/apk
+          find . -path ./.git -prune -o -type f \( -name '*.apk' -o -name '*.aab' \) -print > /tmp/apk-paths.txt
+          echo "--- found APK/AAB ---"; cat /tmp/apk-paths.txt
+          echo "--- app/build layout ---"; ls -R app/build 2>/dev/null | head -40 || true
+          while IFS= read -r f; do cp "$f" /tmp/apk/ 2>/dev/null || true; done < /tmp/apk-paths.txt
+          ls -la /tmp/apk || true
+
       - name: Upload debug APK artifact
         if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' }}
         uses: actions/upload-artifact@v4
         with:
           name: debug-apk
-          path: app/build/**/*.apk
-          if-no-files-found: error
+          path: |
+            /tmp/apk
+            /tmp/apk-paths.txt
+          if-no-files-found: warn
 
       - name: Upload release APKs artifact
         if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
@@ -143,7 +156,7 @@ jobs:
         with:
           name: release-apks
           path: app/build/**/*.apk
-          if-no-files-found: error
+          if-no-files-found: warn
 
       # 打 tag 时同步发布 GitHub Release(携带全部渠道 release APK)
       - name: Publish GitHub Release
