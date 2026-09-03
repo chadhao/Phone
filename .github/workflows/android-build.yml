@@ -77,18 +77,25 @@ jobs:
       - name: Stage APK/AAB for upload
         run: |
           mkdir -p /tmp/apk
+          echo "PWD=$(pwd)"
+          echo "--- top-level ---"; ls -la | head -20
           find . -path ./.git -prune -o -type f \( -name '*.apk' -o -name '*.aab' \) -print > /tmp/apk-paths.txt
           echo "--- found in workspace ---"; cat /tmp/apk-paths.txt
           if [ ! -s /tmp/apk-paths.txt ]; then
             {
-              echo "no apk/aab under workspace; app/build layout:"
-              ls -R app/build 2>/dev/null | head -120
+              echo "PWD=$(pwd)"
+              echo "--- top-level ---"
+              ls -la | head -20
+              echo "--- app/build tree (head) ---"
+              ls -R app/build 2>/dev/null | head -100
+              echo "--- app/build tree (tail) ---"
+              ls -R app/build 2>/dev/null | tail -60
               echo "--- runner-wide search ---"
               find "$RUNNER_TEMP" /home/runner /tmp -type f \( -name '*.apk' -o -name '*.aab' \) 2>/dev/null | head -40
             } > /tmp/stage-diag.txt 2>&1 || true
-            echo "::error::No APK/AAB staged; diagnostics below"
-            # 逐行注入 annotation,供匿名 API 经 check-run annotations 读取
-            while IFS= read -r L; do [ -n "$L" ] && echo "::error::$L"; done < <(tail -n 30 /tmp/stage-diag.txt)
+            # 注入结构化 annotations(pwd/顶层/树首/树尾/全盘),供匿名 API 读取
+            while IFS= read -r L; do [ -n "$L" ] && echo "::error::$L"; done < <(grep -E '^(PWD|---|/|\./|app|\.gradle|build)' /tmp/stage-diag.txt | head -40)
+            echo "::error::---- full diag ends ----"
             exit 1
           fi
           while IFS= read -r f; do cp "$f" /tmp/apk/ 2>/dev/null || true; done < /tmp/apk-paths.txt
