@@ -12,9 +12,6 @@
 #   SIGNING_STORE_PASSWORD   : keystore 密码
 #   SIGNING_KEY_ALIAS        : key 别名
 #   SIGNING_KEY_PASSWORD     : key 密码
-#
-# 应用自身键(可选,缺省为空字符串,不影响编译):
-#   RIGHT_APP_KEY
 
 name: Android Build
 
@@ -38,8 +35,6 @@ jobs:
       SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
       SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
       SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
-      # --- 应用自身键(来自 GitHub Secrets,未配置则为空) ---
-      RIGHT_APP_KEY: ${{ secrets.RIGHT_APP_KEY }}
 
     steps:
       # checkout/setup-java 升到当前 mainline(v4 已加 Node20 deprecation 警告)。
@@ -58,15 +53,6 @@ jobs:
 
       - name: Accept Android SDK licenses
         run: yes | sdkmanager --licenses >/dev/null 2>&1 || true
-
-      # build.gradle.kts 会无条件读取 local.properties;缺失则配置阶段直接失败。
-      # CI 上 AGP 通过 ANDROID_HOME 定位 SDK,这里只需补齐应用自身键(缺省为空)。
-      - name: Generate local.properties
-        run: |
-          {
-            echo "RIGHT_APP_KEY=${RIGHT_APP_KEY}"
-          } > local.properties
-          echo "local.properties generated ($(wc -l < local.properties) lines)"
 
       # 仅当签名 Secret 齐全时解码 keystore,并在步骤级注入 SIGNING_* 供 Gradle 读取
       - name: Decode signing keystore

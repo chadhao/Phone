@@ -16,9 +16,6 @@ val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
-val properties = Properties().apply {
-    load(rootProject.file("local.properties").reader())
-}
 
 fun hasSigningVars(): Boolean {
     return providers.environmentVariable("SIGNING_KEY_ALIAS").orNull != null
@@ -41,7 +38,7 @@ android {
         targetSdk = project.libs.versions.app.build.targetSDK.get().toInt()
         versionName = project.property("VERSION_NAME").toString()
         versionCode = project.property("VERSION_CODE").toString().toInt()
-        buildConfigField("String", "RIGHT_APP_KEY", "\"${properties["RIGHT_APP_KEY"]}\"")
+        buildConfigField("String", "RIGHT_APP_KEY", "\"dev.chadhao.phone\"")
         ksp {
             arg("room.schemaLocation", "$projectDir/schemas")
         }
