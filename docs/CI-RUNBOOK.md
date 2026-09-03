@@ -59,6 +59,12 @@ curl -s -o /dev/null -w "%{http_code}\n" -X POST \
 | `5cb50cd` | `upload-artifact: No files were found`(构建本身成功) | AGP 9 产物路径与旧 glob `app/build/**/*.apk` 不符 → 改 workspace 级 `find *.apk/*.aab` + cp 到 `/tmp/apk`,上传 `/tmp/apk` 与路径清单 `/tmp/apk-paths.txt` |
 | `966da5e` | (加固,release 通道未跑过) | release 上传残留旧 glob、`gh release create` 依赖旧目录 → 统一走 staging 目录;`continue-on-error` 兜底只读 token |
 | `c8b2351`~`fc35058` | (2026-09-03 个人版改造) | 包名→`dev.chadhao.phone`、品牌 Chad Phone、去内购、**单 foss flavor**、依赖切至 fork `com.github.chadhao.android-app-commons:commons-foss:afb06b3c`;CI 任务名随 flavor 收敛为 `assembleFossDebug` / `assembleRelease`,产物 stage/上传逻辑不变 |
+| `03a1b69` | **全线假绿 + artifact 全为 142B**(构建从未真正执行) | 根因①:gradlew 用 `java -jar gradle-wrapper.jar`,而该 jar manifest 无 Main-Class(`no main manifest attribute`)→ wrapper 从未运行;②shell 无 pipefail,`gradle|tee` 吞掉失败退出码 → 假绿。修:gradlew 改官方 `-classpath ... org.gradle.wrapper.GradleWrapperMain`;build 步骤显式 `set -o pipefail` |
+| `fbd921a` | 真编译后首个错误:签名配置 `Cannot convert '' to File` | CI 把未配置 secrets 注为空串 env,`orNull != null` 误判为已配 → `storeFile=file("")`。修:`hasSigningVars()` 改为**非空判断** |
+| `ae17c0d` | AAR metadata 28 项:fork commons 及传递依赖要求 compileSdk37 / AGP≥9.1 | **整体对齐 fork 工具链**:AGP 9.0→9.2.0、Kotlin 2.3.10→2.3.20、KSP 2.3.5→2.3.9、compile/targetSdk 36→37、Gradle 9.3.1→9.7.1;CI 预装 `platforms;android-37` |
+| `5c100ae` | (清理) | 删掉为绕假绿而建的 find+cp 产物杂技;upload 直连 AGP 标准路径 `app/build/outputs/apk/foss/{debug,release}/*.apk`,`if-no-files-found: error`(缺产物必红)。**首次产出真实 APK(debug ≈33MB)** |
+
+> **铁律(本仓库)**:任何 `gradle ... | tee` 步骤必须先 `set -o pipefail`,否则失败会被吞成假绿。wrapper 相关异常先查 `gradle-wrapper.jar` 与 gradlew 启动方式。
 
 ## 4. 本地 YAML 校验(push 前必做)
 
