@@ -96,16 +96,26 @@ jobs:
           fi
           exit 0
 
-      # AGP 9 产物目录与旧版不同:全局搜索 APK/AAB 并拷贝到统一目录,再上传。
-      # 三种触发(debug push / tag / dispatch)都运行此 staging;产物互斥,视触发而定。
+      # AGP 9 产物目录与旧版不同:先 workspace 级搜索 APK/AAB 并拷贝到统一目录再上传。
+      # 找不到产物时:打印目录树与全盘搜索结果(含 runner 临时目录),并让 job 失败——禁止空包静默通过。
       - name: Stage APK/AAB for upload
         run: |
           mkdir -p /tmp/apk
           find . -path ./.git -prune -o -type f \( -name '*.apk' -o -name '*.aab' \) -print > /tmp/apk-paths.txt
-          echo "--- found APK/AAB ---"; cat /tmp/apk-paths.txt
-          echo "--- app/build layout ---"; ls -R app/build 2>/dev/null | head -40 || true
+          echo "--- found in workspace ---"; cat /tmp/apk-paths.txt
+          if [ ! -s /tmp/apk-paths.txt ]; then
+            echo "::error::No APK/AAB found under workspace. Dumping app/build layout:"
+            ls -R app/build 2>/dev/null | head -120 || echo "(app/build missing or empty)"
+            echo "::error::Searching whole runner for APK/AAB ..."
+            find "$RUNNER_TEMP" /home/runner /tmp -type f \( -name '*.apk' -o -name '*.aab' \) 2>/dev/null | head -40 || true
+            exit 1
+          fi
           while IFS= read -r f; do cp "$f" /tmp/apk/ 2>/dev/null || true; done < /tmp/apk-paths.txt
-          ls -la /tmp/apk || true
+          echo "--- staged /tmp/apk ---"; ls -la /tmp/apk
+          if ! ls /tmp/apk/*.apk /tmp/apk/*.aab >/dev/null 2>&1; then
+            echo "::error::APK/AAB paths recorded but copy produced no files in /tmp/apk"
+            exit 1
+          fi
 
       - name: Upload debug APK artifact
         if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' }}
