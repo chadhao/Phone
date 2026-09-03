@@ -93,6 +93,7 @@ import dev.chadhao.phone.helpers.CURRENT_RECENT_CALL
 import dev.chadhao.phone.helpers.CURRENT_RECENT_CALL_LIST
 import dev.chadhao.phone.helpers.ContactNameFormatter
 import dev.chadhao.phone.helpers.ContactSearchIndex
+import dev.chadhao.phone.helpers.applyRangeHighlight
 import dev.chadhao.phone.helpers.FILTER_RECENT_CALLS_ALL
 import dev.chadhao.phone.helpers.FILTER_RECENT_CALLS_CONTACTS
 import dev.chadhao.phone.helpers.PinyinConverter
