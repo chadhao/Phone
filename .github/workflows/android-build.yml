@@ -1,9 +1,9 @@
-# Android CI/CD for AlRight Phone (chadhao/Phone)
+# Android CI/CD for Chad Phone (chadhao/Phone)
 #
 # 触发策略:
-#   - push / PR 到 main        -> 快速验证(构建 gplay debug APK)
-#   - 打 tag v* (如 v8.4.0)    -> 构建全部渠道 release APK,并发布到 GitHub Release
-#   - 手动 workflow_dispatch   -> 构建全部渠道 release APK,上传为 artifact
+#   - push / PR 到 main        -> 快速验证(构建 foss debug APK)
+#   - 打 tag v* (如 v8.4.0)    -> 构建 foss release APK,并发布到 GitHub Release
+#   - 手动 workflow_dispatch   -> 构建 foss release APK,上传为 artifact
 #
 # Release 签名(可选):在仓库 Settings -> Secrets and variables -> Actions 配置以下 Secret,
 # 配置齐全后 release 构建将自动签名;不配置则产出 unsigned APK。
@@ -13,11 +13,8 @@
 #   SIGNING_KEY_ALIAS        : key 别名
 #   SIGNING_KEY_PASSWORD     : key 密码
 #
-# 内购/权益字段(可选,缺省为空字符串,不影响编译):
+# 应用自身键(可选,缺省为空字符串,不影响编译):
 #   RIGHT_APP_KEY
-#   PRODUCT_ID_X1 / PRODUCT_ID_X2 / PRODUCT_ID_X3
-#   SUBSCRIPTION_ID_X1 / X2 / X3
-#   SUBSCRIPTION_YEAR_ID_X1 / X2 / X3
 
 name: Android Build
 
@@ -41,17 +38,8 @@ jobs:
       SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
       SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
       SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
-      # --- 内购/权益字段(来自 GitHub Secrets,未配置则为空) ---
+      # --- 应用自身键(来自 GitHub Secrets,未配置则为空) ---
       RIGHT_APP_KEY: ${{ secrets.RIGHT_APP_KEY }}
-      PRODUCT_ID_X1: ${{ secrets.PRODUCT_ID_X1 }}
-      PRODUCT_ID_X2: ${{ secrets.PRODUCT_ID_X2 }}
-      PRODUCT_ID_X3: ${{ secrets.PRODUCT_ID_X3 }}
-      SUBSCRIPTION_ID_X1: ${{ secrets.SUBSCRIPTION_ID_X1 }}
-      SUBSCRIPTION_ID_X2: ${{ secrets.SUBSCRIPTION_ID_X2 }}
-      SUBSCRIPTION_ID_X3: ${{ secrets.SUBSCRIPTION_ID_X3 }}
-      SUBSCRIPTION_YEAR_ID_X1: ${{ secrets.SUBSCRIPTION_YEAR_ID_X1 }}
-      SUBSCRIPTION_YEAR_ID_X2: ${{ secrets.SUBSCRIPTION_YEAR_ID_X2 }}
-      SUBSCRIPTION_YEAR_ID_X3: ${{ secrets.SUBSCRIPTION_YEAR_ID_X3 }}
 
     steps:
       # checkout/setup-java 升到当前 mainline(v4 已加 Node20 deprecation 警告)。
@@ -72,20 +60,11 @@ jobs:
         run: yes | sdkmanager --licenses >/dev/null 2>&1 || true
 
       # build.gradle.kts 会无条件读取 local.properties;缺失则配置阶段直接失败。
-      # CI 上 AGP 通过 ANDROID_HOME 定位 SDK,这里只需补齐内购字段(缺省为空)。
+      # CI 上 AGP 通过 ANDROID_HOME 定位 SDK,这里只需补齐应用自身键(缺省为空)。
       - name: Generate local.properties
         run: |
           {
             echo "RIGHT_APP_KEY=${RIGHT_APP_KEY}"
-            echo "PRODUCT_ID_X1=${PRODUCT_ID_X1}"
-            echo "PRODUCT_ID_X2=${PRODUCT_ID_X2}"
-            echo "PRODUCT_ID_X3=${PRODUCT_ID_X3}"
-            echo "SUBSCRIPTION_ID_X1=${SUBSCRIPTION_ID_X1}"
-            echo "SUBSCRIPTION_ID_X2=${SUBSCRIPTION_ID_X2}"
-            echo "SUBSCRIPTION_ID_X3=${SUBSCRIPTION_ID_X3}"
-            echo "SUBSCRIPTION_YEAR_ID_X1=${SUBSCRIPTION_YEAR_ID_X1}"
-            echo "SUBSCRIPTION_YEAR_ID_X2=${SUBSCRIPTION_YEAR_ID_X2}"
-            echo "SUBSCRIPTION_YEAR_ID_X3=${SUBSCRIPTION_YEAR_ID_X3}"
           } > local.properties
           echo "local.properties generated ($(wc -l < local.properties) lines)"
 
@@ -96,14 +75,14 @@ jobs:
           echo "$SIGNING_KEYSTORE_BASE64" | base64 -d > "$SIGNING_STORE_FILE"
           echo "Keystore decoded to $SIGNING_STORE_FILE"
 
-      # 常规 push / PR:只构建 gplay debug,快速验证可编译
+      # 常规 push / PR:只构建 foss debug,快速验证可编译
       # 默认 shell 带 -eo pipefail:gradle 失败时管道整体返回非零,日志已写入 /tmp
-      - name: Build debug APK (gplay)
+      - name: Build debug APK (foss)
         if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' }}
-        run: ./gradlew assembleGplayDebug --no-daemon 2>&1 | tee /tmp/gradle-debug.log
+        run: ./gradlew assembleFossDebug --no-daemon 2>&1 | tee /tmp/gradle-debug.log
 
-      # tag 或手动触发:构建全部 4 个渠道 release(minify + 签名/未签名)
-      - name: Build release APKs (all flavors)
+      # tag 或手动触发:构建 foss release(minify + 签名/未签名)
+      - name: Build release APK (foss)
         if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
         run: ./gradlew assembleRelease --no-daemon 2>&1 | tee /tmp/gradle-release.log
 
@@ -162,7 +141,7 @@ jobs:
             /tmp/apk-paths.txt
           if-no-files-found: warn
 
-      # 打 tag 时同步发布 GitHub Release(携带全部渠道 release APK,取自 staging 目录)。
+      # 打 tag 时同步发布 GitHub Release(携带 foss release APK,取自 staging 目录)。
       # continue-on-error:Release 创建需要 GITHUB_TOKEN 具备 contents:write 权限
       # (仓库默认权限足够;若设为 read-only,或同名 Release 已存在,此步会失败)。
       # 失败仅留 run 告警、不把已成功的构建标红,便于人工补发。
