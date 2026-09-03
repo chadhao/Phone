@@ -17,11 +17,11 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+fun envValue(name: String) = providers.environmentVariable(name).orNull?.trim().orEmpty()
+
 fun hasSigningVars(): Boolean {
-    return providers.environmentVariable("SIGNING_KEY_ALIAS").orNull != null
-        && providers.environmentVariable("SIGNING_KEY_PASSWORD").orNull != null
-        && providers.environmentVariable("SIGNING_STORE_FILE").orNull != null
-        && providers.environmentVariable("SIGNING_STORE_PASSWORD").orNull != null
+    return listOf("SIGNING_KEY_ALIAS", "SIGNING_KEY_PASSWORD", "SIGNING_STORE_FILE", "SIGNING_STORE_PASSWORD")
+        .all { envValue(it).isNotEmpty() }
 }
 
 base {
@@ -54,10 +54,10 @@ android {
             }
         } else if (hasSigningVars()) {
             register("release") {
-                keyAlias = providers.environmentVariable("SIGNING_KEY_ALIAS").get()
-                keyPassword = providers.environmentVariable("SIGNING_KEY_PASSWORD").get()
-                storeFile = file(providers.environmentVariable("SIGNING_STORE_FILE").get())
-                storePassword = providers.environmentVariable("SIGNING_STORE_PASSWORD").get()
+                keyAlias = envValue("SIGNING_KEY_ALIAS")
+                keyPassword = envValue("SIGNING_KEY_PASSWORD")
+                storeFile = file(envValue("SIGNING_STORE_FILE"))
+                storePassword = envValue("SIGNING_STORE_PASSWORD")
             }
         } else {
             logger.warn("Warning: No signing config found. Build will be unsigned.")
