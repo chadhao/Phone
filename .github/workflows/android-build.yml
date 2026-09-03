@@ -95,14 +95,49 @@ jobs:
           echo "Keystore decoded to $SIGNING_STORE_FILE"
 
       # 常规 push / PR:只构建 gplay debug,快速验证可编译
+      # continue-on-error:构建失败不中断,由下方 Report 步骤把真实错误贴到 commit 评论,便于免登录排查
       - name: Build debug APK (gplay)
+        id: debug_build
         if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' }}
-        run: ./gradlew assembleGplayDebug --no-daemon
+        continue-on-error: true
+        run: |
+          ./gradlew assembleGplayDebug --no-daemon 2>&1 | tee /tmp/gradle-debug.log
+          exit ${PIPESTATUS[0]}
 
       # tag 或手动触发:构建全部 4 个渠道 release(minify + 签名/未签名)
       - name: Build release APKs (all flavors)
+        id: release_build
         if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
-        run: ./gradlew assembleRelease --no-daemon
+        continue-on-error: true
+        run: |
+          ./gradlew assembleRelease --no-daemon 2>&1 | tee /tmp/gradle-release.log
+          exit ${PIPESTATUS[0]}
+
+      # 构建失败时把 Gradle 关键错误段贴到本 commit 的评论(公开可读,便于无 token 排查)
+      - name: Report build failure to commit comment
+        if: ${{ steps.debug_build.outcome == 'failure' || steps.release_build.outcome == 'failure' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LOG=/tmp/gradle-debug.log
+          if [ -f /tmp/gradle-release.log ]; then LOG=/tmp/gradle-release.log; fi
+          python3 - "$LOG" <<'PY'
+import json, os, sys, urllib.request
+raw = open(sys.argv[1], encoding='utf-8', errors='replace').read()
+tail = raw[-20000:]
+idx = tail.rfind('FAILURE')
+seg = tail[idx:] if idx >= 0 else tail
+body = '### Android CI failed\n\n```text\n' + seg + '\n```'
+req = urllib.request.Request(
+    'https://api.github.com/repos/' + os.environ['GITHUB_REPOSITORY']
+    + '/commits/' + os.environ['GITHUB_SHA'] + '/comments',
+    data=json.dumps({'body': body}).encode(),
+    method='POST',
+    headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+             'Accept': 'application/vnd.github+json',
+             'Content-Type': 'application/json'})
+print('commit comment status:', urllib.request.urlopen(req).status)
+PY
 
       - name: Upload debug APK artifact
         if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' }}
