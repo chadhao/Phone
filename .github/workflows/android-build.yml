@@ -87,9 +87,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          LOG=$(ls /tmp/gradle-*.log 2>/dev/null | head -1)
-          if [ -n "$LOG" ]; then
+          DESC=""
+          if [ -f /tmp/stage-diag.txt ]; then
+            DESC=$(tail -c 600 /tmp/stage-diag.txt | tr '\n' ' ' | tr -s ' ' | cut -c1-130)
+          elif LOG=$(ls /tmp/gradle-*.log 2>/dev/null | head -1); then
             DESC=$(grep -m1 -A3 -E "FAILURE|What went wrong|Caused by|error:|Exception" "$LOG" | head -6 | tr '\n' ' ' | cut -c1-130)
+          fi
+          if [ -n "$DESC" ]; then
             gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
               -f state=failure -f context="android-build-log" \
               -f description="$DESC" >/dev/null 2>&1 || true
@@ -104,10 +108,13 @@ jobs:
           find . -path ./.git -prune -o -type f \( -name '*.apk' -o -name '*.aab' \) -print > /tmp/apk-paths.txt
           echo "--- found in workspace ---"; cat /tmp/apk-paths.txt
           if [ ! -s /tmp/apk-paths.txt ]; then
-            echo "::error::No APK/AAB found under workspace. Dumping app/build layout:"
-            ls -R app/build 2>/dev/null | head -120 || echo "(app/build missing or empty)"
-            echo "::error::Searching whole runner for APK/AAB ..."
-            find "$RUNNER_TEMP" /home/runner /tmp -type f \( -name '*.apk' -o -name '*.aab' \) 2>/dev/null | head -40 || true
+            {
+              echo "no apk/aab under workspace; app/build layout:"
+              ls -R app/build 2>/dev/null | head -120
+              echo "--- runner-wide search ---"
+              find "$RUNNER_TEMP" /home/runner /tmp -type f \( -name '*.apk' -o -name '*.aab' \) 2>/dev/null | head -40
+            } > /tmp/stage-diag.txt 2>&1 || true
+            cat /tmp/stage-diag.txt
             exit 1
           fi
           while IFS= read -r f; do cp "$f" /tmp/apk/ 2>/dev/null || true; done < /tmp/apk-paths.txt
