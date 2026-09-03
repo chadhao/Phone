@@ -17,6 +17,7 @@ import com.goodwy.commons.extensions.beGoneIf
 import com.goodwy.commons.extensions.beVisible
 import com.goodwy.commons.extensions.getContrastColor
 import com.goodwy.commons.extensions.getMyContactsCursor
+import com.goodwy.commons.extensions.getPhoneNumberTypeText
 import com.goodwy.commons.extensions.getProperBackgroundColor
 import com.goodwy.commons.extensions.getProperPrimaryColor
 import com.goodwy.commons.extensions.getProperTextColor
@@ -67,6 +68,7 @@ import dev.chadhao.phone.models.RecentCall
 import com.google.gson.Gson
 import dev.chadhao.phone.extensions.launchSendWhatsAppIntent
 import dev.chadhao.phone.helpers.DialpadT9
+import dev.chadhao.phone.helpers.ContactSearchIndex
 import dev.chadhao.phone.helpers.FILTER_RECENT_CALLS_ALL
 import dev.chadhao.phone.helpers.FILTER_RECENT_CALLS_CONTACTS
 import dev.chadhao.phone.helpers.LANGUAGE_SYSTEM
@@ -319,6 +321,7 @@ class RecentsFragment(
 
     override fun onSearchClosed() {
         searchQuery = null
+        recentsAdapter?.bypassListFilter = false
         showOrHidePlaceholder(allRecentCalls.isEmpty())
         recentsAdapter?.updateItems(allRecentCalls)
     }
@@ -355,6 +358,7 @@ class RecentsFragment(
             prepareCallLog(recentCalls) {
                 activity?.runOnUiThread {
                     showOrHidePlaceholder(recentCalls.isEmpty())
+                    recentsAdapter?.bypassListFilter = false
                     recentsAdapter?.updateItems(it, fixedText)
                 }
             }
@@ -364,15 +368,24 @@ class RecentsFragment(
     private fun updateSearchDialpadResult() {
         ensureBackgroundThread {
             val fixedText = searchQuery!!.trim().replace("\\s+".toRegex(), " ")
+            if (fixedText.isEmpty()) {
+                activity?.runOnUiThread {
+                    showOrHidePlaceholder(allRecentCalls.isEmpty())
+                    recentsAdapter?.bypassListFilter = false
+                    recentsAdapter?.updateItems(allRecentCalls)
+                }
+                return@ensureBackgroundThread
+            }
+
             val langPref = context.config.dialpadSecondaryLanguage ?: ""
             val langLocale = Locale.getDefault().language
             val isAutoLang = DialpadT9.getSupportedSecondaryLanguages().contains(langLocale) && langPref == LANGUAGE_SYSTEM
             val lang = if (isAutoLang) langLocale else langPref
 
+            // 1) Recent calls matched the old way (keeps Latin T9 + nickname/company/job behaviour).
             val recentCalls = allRecentCalls
                 .filterIsInstance<RecentCall>()
                 .filter { recentCall ->
-
                     val convertedName = DialpadT9.convertLettersToNumbers(
                         recentCall.name.normalizeString().uppercase(), lang)
                     val convertedNameDigitsOnly = convertedName.filter { it.isDigit() }
@@ -400,13 +413,62 @@ class RecentsFragment(
                         .thenByDescending { it.startTS }
                 )
 
-            prepareCallLog(recentCalls) {
+            // 2) Full-contact pinyin/T9 matches (search scope extension, design §2/§8).
+            //    Contacts already represented by a recent-call row are skipped to avoid duplicates.
+            val cachedContacts = (activity as MainActivity).cachedContacts
+            val recentNumberDigits = recentCalls
+                .mapTo(HashSet()) { it.phoneNumber.filter { char -> char.isDigit() } }
+            val virtualCalls = ContactSearchIndex.queryDigits(fixedText, cachedContacts)
+                .asSequence()
+                .map { it.contact }
+                .filter { contact ->
+                    val contactNumberDigits = contact.phoneNumbers.mapNotNull { number ->
+                        number.value.filter { char -> char.isDigit() }.takeIf { it.isNotEmpty() }
+                    }
+                    // Skip contacts whose any number is already shown by a recent-call row.
+                    contactNumberDigits.isNotEmpty() && contactNumberDigits.none { it in recentNumberDigits }
+                }
+                .map { it.toVirtualRecentCall() }
+                .toList()
+
+            val mergedCalls = recentCalls + virtualCalls
+            prepareCallLog(mergedCalls) {
                 activity?.runOnUiThread {
-                    showOrHidePlaceholder(recentCalls.isEmpty())
+                    showOrHidePlaceholder(mergedCalls.isEmpty())
+                    recentsAdapter?.bypassListFilter = true
                     recentsAdapter?.updateItems(it, fixedText)
                 }
             }
         }
+    }
+
+    /** Builds a display-only recent call row for a contact matched outside the call history. */
+    private fun Contact.toVirtualRecentCall(): RecentCall {
+        val phone = phoneNumbers.firstOrNull { it.isPrimary } ?: phoneNumbers.firstOrNull()
+        val number = phone?.value.orEmpty()
+        return RecentCall(
+            id = -(id + 1),
+            phoneNumber = number,
+            name = getNameToDisplay(),
+            nickname = nickname,
+            company = organization.company,
+            jobPosition = organization.jobPosition,
+            photoUri = photoUri,
+            startTS = 0L,
+            duration = 0,
+            type = Calls.INCOMING_TYPE,
+            simID = -1,
+            simColor = 0,
+            specificNumber = number,
+            specificType = phone?.let { context.getPhoneNumberTypeText(it.type, it.label) }.orEmpty(),
+            isUnknownNumber = false,
+            contactID = id,
+            features = null,
+            isVoiceMail = false,
+            blockReason = null,
+            pinyinAbbr = ContactSearchIndex.abbreviationFor(id),
+            isVirtual = true,
+        )
     }
 
     private fun requestCallLogPermission() {

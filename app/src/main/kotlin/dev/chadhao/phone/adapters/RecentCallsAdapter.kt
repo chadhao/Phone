@@ -6,9 +6,12 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.LayerDrawable
 import android.net.Uri
 import android.provider.CallLog.Calls
+import android.text.Spannable
 import android.text.SpannableString
+import android.text.SpannableStringBuilder
 import android.text.TextUtils
 import android.text.format.DateUtils
+import android.text.style.ForegroundColorSpan
 import android.util.TypedValue
 import android.view.ContextThemeWrapper
 import android.view.Gravity
@@ -131,6 +134,8 @@ class RecentCallsAdapter(
     private val missedCallColor = resources.getColor(R.color.red_missed, activity.theme)
     private var secondaryTextColor = textColor.adjustAlpha(0.6f)
     private var textToHighlight = ""
+    // Dialpad/contact search builds its own result rows, so call-type filters must not drop them.
+    var bypassListFilter = false
     private var getBlockedNumbers = activity.getBlockedNumbers()
     private val cachedSimColors = HashMap<Int, Int>()
     private val marginNormal = resources.getDimension(com.goodwy.commons.R.dimen.normal_margin).toInt()
@@ -290,15 +295,30 @@ class RecentCallsAdapter(
         val layoutManager = recyclerView.layoutManager!!
         val recyclerViewState = layoutManager.onSaveInstanceState()
         val listFilter =
-            when (activity.config.filterRecentCalls) {
-                FILTER_RECENT_CALLS_ALL -> list
-                FILTER_RECENT_CALLS_CONTACTS -> list?.filterIsInstance<RecentCall>()
-                    ?.filter { it.contactID != null }
-                else -> list?.filterIsInstance<RecentCall>()
-                    ?.filter { it.type == activity.config.filterRecentCalls }
+            if (bypassListFilter) {
+                list
+            } else {
+                when (activity.config.filterRecentCalls) {
+                    FILTER_RECENT_CALLS_ALL -> list
+                    FILTER_RECENT_CALLS_CONTACTS -> list?.filterIsInstance<RecentCall>()
+                        ?.filter { it.contactID != null }
+                    else -> list?.filterIsInstance<RecentCall>()
+                        ?.filter { it.type == activity.config.filterRecentCalls }
+                }
             }
         super.submitList(listFilter) {
             layoutManager.onRestoreInstanceState(recyclerViewState)
+        }
+    }
+
+    /** Appends a dimmed pinyin abbreviation (e.g. "  LBW") after the displayed name. */
+    private fun CharSequence.appendPinyinAbbr(abbr: String?): CharSequence {
+        if (abbr.isNullOrEmpty()) return this
+        return SpannableStringBuilder(this).apply {
+            val start = length
+            append("  ")
+            append(abbr)
+            setSpan(ForegroundColorSpan(secondaryTextColor), start, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
     }
 
@@ -686,7 +706,7 @@ class RecentCallsAdapter(
 //                val matchingContact = findContactByCall(call)
                 val name = call.name //matchingContact?.getNameToDisplay() ?: call.name
                 val formatPhoneNumbers = activity.config.formatPhoneNumbers
-                var nameToShow = if (name == call.phoneNumber && formatPhoneNumbers) {
+                var nameToShow: CharSequence = if (name == call.phoneNumber && formatPhoneNumbers) {
                     SpannableString(name.formatPhoneNumber())
                 } else {
                     SpannableString(formatterUnicodeWrap(name))
@@ -697,8 +717,10 @@ class RecentCallsAdapter(
                 }
 
                 if (textToHighlight.isNotEmpty() && nameToShow.contains(textToHighlight, true)) {
-                    nameToShow = SpannableString(nameToShow.toString().highlightTextPart(textToHighlight, properPrimaryColor))
+                    nameToShow = nameToShow.toString().highlightTextPart(textToHighlight, properPrimaryColor)
                 }
+
+                nameToShow = nameToShow.appendPinyinAbbr(call.pinyinAbbr)
 
                 itemRecentsName.apply {
                     text = nameToShow
@@ -820,6 +842,14 @@ class RecentCallsAdapter(
                     else -> incomingCallIcon
                 }
                 itemRecentsType.setImageDrawable(drawable)
+                itemRecentsType.visibility = View.VISIBLE
+                if (call.isVirtual) {
+                    itemRecentsType.visibility = View.INVISIBLE
+                    itemRecentsSimImage.visibility = View.GONE
+                    itemRecentsSimId.visibility = View.GONE
+                    itemRecentsDuration.visibility = View.GONE
+                    itemRecentsDateTime.visibility = View.GONE
+                }
 
                 itemRecentsInfo.apply {
                     beVisibleIf(showOverflowMenu)
@@ -913,7 +943,7 @@ class RecentCallsAdapter(
 //                val matchingContact = findContactByCall(call)
                 val name = call.name //matchingContact?.getNameToDisplay() ?: call.name
                 val formatPhoneNumbers = activity.config.formatPhoneNumbers
-                var nameToShow = if (name == call.phoneNumber && formatPhoneNumbers) {
+                var nameToShow: CharSequence = if (name == call.phoneNumber && formatPhoneNumbers) {
                     SpannableString(name.formatPhoneNumber())
                 } else {
                     SpannableString(formatterUnicodeWrap(name))
@@ -924,8 +954,10 @@ class RecentCallsAdapter(
                 }
 
                 if (textToHighlight.isNotEmpty() && nameToShow.contains(textToHighlight, true)) {
-                    nameToShow = SpannableString(nameToShow.toString().highlightTextPart(textToHighlight, properPrimaryColor))
+                    nameToShow = nameToShow.toString().highlightTextPart(textToHighlight, properPrimaryColor)
                 }
+
+                nameToShow = nameToShow.appendPinyinAbbr(call.pinyinAbbr)
 
                 itemRecentsName.apply {
                     text = nameToShow
@@ -1047,6 +1079,14 @@ class RecentCallsAdapter(
                     else -> incomingCallIcon
                 }
                 itemRecentsType.setImageDrawable(drawable)
+                itemRecentsType.visibility = View.VISIBLE
+                if (call.isVirtual) {
+                    itemRecentsType.visibility = View.INVISIBLE
+                    itemRecentsSimImage.visibility = View.GONE
+                    itemRecentsSimId.visibility = View.GONE
+                    itemRecentsDuration.visibility = View.GONE
+                    itemRecentsDateTime.visibility = View.GONE
+                }
 
                 itemRecentsInfo.apply {
                     beVisibleIf(showOverflowMenu)
@@ -1126,8 +1166,8 @@ class RecentCallsAdapter(
                 swipeRightIcon.setColorFilter(properPrimaryColor.getContrastColor())
                 swipeRightIconHolder.setBackgroundColor(swipeActionColor(call, swipeRightAction))
 
-                itemRecentsHolder.setDirectionEnabled(SwipeDirection.Left, swipeLeftAction != SWIPE_ACTION_NONE)
-                itemRecentsHolder.setDirectionEnabled(SwipeDirection.Right, swipeRightAction != SWIPE_ACTION_NONE)
+                itemRecentsHolder.setDirectionEnabled(SwipeDirection.Left, !call.isVirtual && swipeLeftAction != SWIPE_ACTION_NONE)
+                itemRecentsHolder.setDirectionEnabled(SwipeDirection.Right, !call.isVirtual && swipeRightAction != SWIPE_ACTION_NONE)
 
                 val halfScreenWidth = activity.resources.displayMetrics.widthPixels / activity.config.swipeToActionWidth
                 val swipeWidth = activity.resources.getDimension(com.goodwy.commons.R.dimen.swipe_width)

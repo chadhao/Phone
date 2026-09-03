@@ -967,6 +967,10 @@ class MainActivity : SimpleActivity() {
                 cachedContacts.addAll(contacts)
             } catch (_: Exception) {
             }
+
+            ensureBackgroundThread {
+                ContactSearchIndex.rebuild(cachedContacts)
+            }
         }
     }
 

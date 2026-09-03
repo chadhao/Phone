@@ -26,6 +26,7 @@ import dev.chadhao.phone.helpers.SWIPE_ACTION_EDIT
 import dev.chadhao.phone.helpers.SWIPE_ACTION_MESSAGE
 import dev.chadhao.phone.helpers.SWIPE_ACTION_OPEN
 import dev.chadhao.phone.helpers.SWIPE_ACTION_WHATSAPP
+import dev.chadhao.phone.helpers.ContactSearchIndex
 import dev.chadhao.phone.interfaces.RefreshItemsListener
 
 class ContactsFragment(context: Context, attributeSet: AttributeSet) : MyViewPagerFragment<MyViewPagerFragment.LettersInnerBinding>(context, attributeSet),
@@ -193,37 +194,91 @@ class ContactsFragment(context: Context, attributeSet: AttributeSet) : MyViewPag
         binding.letterFastscroller.setupWithContacts(binding.fragmentList, contacts)
     }
 
+    // Incremented on every query/close so a slow background search can't overwrite a newer result.
+    private var searchGeneration = 0L
+
     override fun onSearchClosed() {
+        searchGeneration++
         binding.fragmentPlaceholder.beVisibleIf(allContacts.isEmpty())
-        (binding.fragmentList.adapter as? ContactsAdapter)?.updateItems(allContacts)
+        (binding.fragmentList.adapter as? ContactsAdapter)?.apply {
+            showSearchPinyinAbbr = false
+            updateItems(allContacts)
+        }
         setupLetterFastScroller(allContacts)
     }
 
     override fun onSearchQueryChanged(text: String, isDialpad: Boolean) {
+        val generation = ++searchGeneration
         val fixedText = text.trim().replace("\\s+".toRegex(), " ")
-        val shouldNormalize = fixedText.normalizeString() == fixedText
-        val filtered = allContacts.filter { contact ->
-            getProperText(contact.getNameToDisplay(), shouldNormalize).contains(fixedText, true) ||
-                getProperText(contact.nickname, shouldNormalize).contains(fixedText, true) ||
-                (fixedText.toLongOrNull() != null && contact.doesContainPhoneNumber(fixedText, true)) ||
-                contact.emails.any { it.value.contains(fixedText, true) } ||
-                contact.relations.any { it.name.contains(fixedText, true) } ||
-                contact.addresses.any { getProperText(it.value, shouldNormalize).contains(fixedText, true) } ||
-                contact.IMs.any { it.value.contains(fixedText, true) } ||
-                getProperText(contact.notes, shouldNormalize).contains(fixedText, true) ||
-                getProperText(contact.organization.company, shouldNormalize).contains(fixedText, true) ||
-                getProperText(contact.organization.jobPosition, shouldNormalize).contains(fixedText, true) ||
-                contact.websites.any { it.contains(fixedText, true) }
-        } as ArrayList
 
-        filtered.sortBy {
-            val nameToDisplay = it.getNameToDisplay()
-            !getProperText(nameToDisplay, shouldNormalize).startsWith(fixedText, true) && !nameToDisplay.contains(fixedText, true)
+        if (fixedText.isEmpty()) {
+            binding.fragmentPlaceholder.beVisibleIf(allContacts.isEmpty())
+            (binding.fragmentList.adapter as? ContactsAdapter)?.apply {
+                showSearchPinyinAbbr = false
+                updateItems(allContacts)
+            }
+            setupLetterFastScroller(allContacts)
+            return
         }
 
-        binding.fragmentPlaceholder.beVisibleIf(filtered.isEmpty())
-        (binding.fragmentList.adapter as? ContactsAdapter)?.updateItems(filtered, fixedText)
-        setupLetterFastScroller(filtered)
+        ensureBackgroundThread {
+            val shouldNormalize = fixedText.normalizeString() == fixedText
+
+            // Existing textual (contains) search keeps nickname/company/email/... fields searchable.
+            val textMatches = allContacts.filter { contact ->
+                getProperText(contact.getNameToDisplay(), shouldNormalize).contains(fixedText, true) ||
+                    getProperText(contact.nickname, shouldNormalize).contains(fixedText, true) ||
+                    (fixedText.toLongOrNull() != null && contact.doesContainPhoneNumber(fixedText, true)) ||
+                    contact.emails.any { it.value.contains(fixedText, true) } ||
+                    contact.relations.any { it.name.contains(fixedText, true) } ||
+                    contact.addresses.any { getProperText(it.value, shouldNormalize).contains(fixedText, true) } ||
+                    contact.IMs.any { it.value.contains(fixedText, true) } ||
+                    getProperText(contact.notes, shouldNormalize).contains(fixedText, true) ||
+                    getProperText(contact.organization.company, shouldNormalize).contains(fixedText, true) ||
+                    getProperText(contact.organization.jobPosition, shouldNormalize).contains(fixedText, true) ||
+                    contact.websites.any { it.contains(fixedText, true) }
+            }
+
+            // Shared pinyin/T9 engine: Chinese initials/full pinyin (and T9 digits on the dialpad)
+            // are matched through ContactSearchIndex, design §2/§8.
+            val hasCjk = fixedText.any { it in '\u4e00'..'\u9fff' }
+            val alnumQuery = fixedText.filter { it.isLetterOrDigit() }
+            val indexMatches = if (!hasCjk && alnumQuery.isNotEmpty()) {
+                val digitQuery = isDialpad || alnumQuery.none { it.isLetter() }
+                if (digitQuery) ContactSearchIndex.queryDigits(alnumQuery, allContacts)
+                else ContactSearchIndex.queryLetters(alnumQuery, allContacts)
+            } else {
+                emptyList()
+            }
+
+            val idToScore = HashMap<Int, Int>()
+            indexMatches.forEach { idToScore[it.contact.id] = it.score }
+
+            val merged = LinkedHashMap<Int, Contact>()
+            textMatches.forEach { merged[it.id] = it }
+            indexMatches.forEach { merged.putIfAbsent(it.contact.id, it.contact) }
+
+            val filtered = merged.values.sortedWith(
+                compareByDescending<Contact> { idToScore[it.id] ?: -1 }
+                    .thenByDescending {
+                        getProperText(it.getNameToDisplay(), shouldNormalize).startsWith(fixedText, true)
+                    }
+                    .thenByDescending {
+                        getProperText(it.getNameToDisplay(), shouldNormalize).contains(fixedText, true)
+                    }
+                    .thenBy { allContacts.indexOf(it) }
+            )
+
+            activity?.runOnUiThread {
+                if (generation != searchGeneration) return@runOnUiThread
+                binding.fragmentPlaceholder.beVisibleIf(filtered.isEmpty())
+                (binding.fragmentList.adapter as? ContactsAdapter)?.apply {
+                    showSearchPinyinAbbr = indexMatches.isNotEmpty()
+                    updateItems(filtered, fixedText)
+                }
+                setupLetterFastScroller(ArrayList(filtered))
+            }
+        }
     }
 
     private fun requestReadContactsPermission() {

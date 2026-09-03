@@ -10,6 +10,7 @@ import android.net.Uri
 import android.telephony.PhoneNumberUtils
 import android.text.Spannable
 import android.text.SpannableString
+import android.text.SpannableStringBuilder
 import android.text.TextUtils
 import android.text.style.ForegroundColorSpan
 import android.util.TypedValue
@@ -72,6 +73,8 @@ class ContactsAdapter(
     ItemTouchHelperContract, MyRecyclerView.MyZoomListener {
 
     private var textToHighlight = highlightText
+    // When a phonetic search is active, the pinyin abbreviation is appended after the name.
+    var showSearchPinyinAbbr = false
     var fontSize: Float = activity.getTextSize()
     private var touchHelper: ItemTouchHelper? = null
     private var startReorderDragListener: StartReorderDragListener? = null
@@ -457,7 +460,7 @@ class ContactsAdapter(
                 setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize)
 
                 val name = contact.getNameToDisplay()
-                text = if (textToHighlight.isEmpty()) {
+                val nameToShow = if (textToHighlight.isEmpty()) {
                     name
                 } else {
                     val normalizedName = name.normalizeString()
@@ -471,6 +474,12 @@ class ContactsAdapter(
                         val lang = if (isAutoLang) langLocale else langPref
                         name.highlightTextFromNumbers(textToHighlight, properPrimaryColor, lang)
                     }
+                }
+                val abbr = if (showSearchPinyinAbbr) ContactSearchIndex.abbreviationFor(contact.id) else null
+                text = if (abbr.isNullOrEmpty()) {
+                    nameToShow
+                } else {
+                    SpannableStringBuilder(nameToShow).append("  ·  ").append(abbr)
                 }
             }
             itemContactNumber.apply {

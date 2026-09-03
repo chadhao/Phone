@@ -32,6 +32,10 @@ data class RecentCall(
     var features: Int? = null,
     val isVoiceMail: Boolean,
     var blockReason: Int? = 0,
+
+    /** Display-only helpers used by the pinyin search results (never persisted in the call log cache). */
+    var pinyinAbbr: String? = null,
+    var isVirtual: Boolean = false,
 ) : CallLogItem(), Serializable {
     val dayCode = startTS.getDayCode()
 
