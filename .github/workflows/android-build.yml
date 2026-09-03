@@ -1,17 +1,12 @@
 # Android CI/CD for Chad Phone (chadhao/Phone)
 #
 # 触发策略:
-#   - push / PR 到 main        -> 快速验证(构建 foss debug APK)
-#   - 打 tag v* (如 v8.4.0)    -> 构建 foss release APK,并发布到 GitHub Release
+#   - push / PR 到 main        -> 构建 foss debug APK(快速验证)
+#   - 打 tag v* (如 v8.4.0)    -> 构建 foss release APK 并发布 GitHub Release
 #   - 手动 workflow_dispatch   -> 构建 foss release APK,上传为 artifact
 #
-# Release 签名(可选):在仓库 Settings -> Secrets and variables -> Actions 配置以下 Secret,
-# 配置齐全后 release 构建将自动签名;不配置则产出 unsigned APK。
-#   SIGNING_KEYSTORE_BASE64  : keystore 文件的 base64 内容(本地可用 `base64 -w0 keystore.jks` 生成)
-#   SIGNING_STORE_FILE       : keystore 在 runner 上的相对路径,例如 keystore.jks
-#   SIGNING_STORE_PASSWORD   : keystore 密码
-#   SIGNING_KEY_ALIAS        : key 别名
-#   SIGNING_KEY_PASSWORD     : key 密码
+# Release 签名(可选):Settings -> Secrets -> Actions 配齐以下 5 项即自动签名,否则 unsigned:
+#   SIGNING_KEYSTORE_BASE64 / SIGNING_STORE_FILE / SIGNING_STORE_PASSWORD / SIGNING_KEY_ALIAS / SIGNING_KEY_PASSWORD
 
 name: Android Build
 
@@ -29,7 +24,6 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # --- Release 签名(来自 GitHub Secrets,未配置则为空) ---
       SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
       SIGNING_STORE_FILE: ${{ secrets.SIGNING_STORE_FILE }}
       SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
@@ -37,8 +31,6 @@ jobs:
       SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
 
     steps:
-      # checkout/setup-java 升到当前 mainline(v4 已加 Node20 deprecation 警告)。
-      # 参数语义未变;setup-java v6 的 Azul API 迁移仅影响 zulu distribution,此处用 temurin。
       - name: Checkout
         uses: actions/checkout@v7
 
@@ -51,116 +43,67 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Accept Android SDK licenses
+      - name: Prepare Android SDK (licenses + platform 37)
         run: |
           yes | sdkmanager --licenses >/dev/null 2>&1 || true
           sdkmanager "platforms;android-37" >/dev/null 2>&1 || true
 
-      # 仅当签名 Secret 齐全时解码 keystore,并在步骤级注入 SIGNING_* 供 Gradle 读取
       - name: Decode signing keystore
         if: env.SIGNING_KEYSTORE_BASE64 != '' && env.SIGNING_STORE_FILE != '' && env.SIGNING_STORE_PASSWORD != '' && env.SIGNING_KEY_ALIAS != '' && env.SIGNING_KEY_PASSWORD != ''
         run: |
           echo "$SIGNING_KEYSTORE_BASE64" | base64 -d > "$SIGNING_STORE_FILE"
           echo "Keystore decoded to $SIGNING_STORE_FILE"
 
-      # 常规 push / PR:构建 foss debug,并在同一 shell 内收集产物(避免跨步骤 cwd/状态差异)。
-      # 默认 shell 带 -eo pipefail:gradle 失败即步骤失败(管道日志已写 /tmp)。
-      - name: Build debug APK (foss) + stage artifact
+      # 常规 push / PR:构建 foss debug。
+      # shell 为 bash -e,显式 pipefail 防止 gradle 失败被 tee 吞掉(曾致全线假绿)。
+      - name: Build debug APK (foss)
         if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' }}
         run: |
           set -o pipefail
           ./gradlew assembleFossDebug --no-daemon 2>&1 | tee /tmp/gradle-debug.log
-          echo "PWD=$(pwd)"
-          mkdir -p /tmp/apk
-          find . -path ./.git -prune -o -type f \( -name '*.apk' -o -name '*.aab' \) -print > /tmp/apk-paths.txt
-          echo "--- found ---"; cat /tmp/apk-paths.txt
-          if [ ! -s /tmp/apk-paths.txt ]; then
-            {
-              echo "PWD=$(pwd)"
-              echo "--- top-level ---"; ls -la | head -15
-              echo "--- app/build tree tail ---"; ls -R app/build 2>/dev/null | tail -80
-              echo "--- runner-wide search ---"; find "$RUNNER_TEMP" /home/runner -type f \( -name '*.apk' -o -name '*.aab' \) 2>/dev/null | head -30
-            } > /tmp/stage-diag.txt 2>&1 || true
-            while IFS= read -r L; do [ -n "$L" ] && echo "::error::$L"; done < <(grep -E '^(PWD|/|\./|app|build|drwx|total)' /tmp/stage-diag.txt | head -25)
-            echo "::error::=== gradle-debug.log tail ==="
-            while IFS= read -r L; do [ -n "$L" ] && echo "::error::$L"; done < <(tail -n 35 /tmp/gradle-debug.log 2>/dev/null)
-            exit 1
-          fi
-          while IFS= read -r f; do cp "$f" /tmp/apk/ 2>/dev/null || true; done < /tmp/apk-paths.txt
-          echo "--- staged ---"; ls -la /tmp/apk
-          ls /tmp/apk/*.apk /tmp/apk/*.aab >/dev/null 2>&1 || { echo "::error::no files staged"; exit 1; }
 
-      # tag 或手动触发:构建 foss release,同样在同一 shell 内收集产物
-      - name: Build release APK (foss) + stage artifact
+      # tag 或手动触发:构建 foss release(minify + 签名/未签名)
+      - name: Build release APK (foss)
         if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
         run: |
           set -o pipefail
           ./gradlew assembleRelease --no-daemon 2>&1 | tee /tmp/gradle-release.log
-          mkdir -p /tmp/apk
-          find . -path ./.git -prune -o -type f \( -name '*.apk' -o -name '*.aab' \) -print > /tmp/apk-paths.txt
-          echo "--- found ---"; cat /tmp/apk-paths.txt
-          if [ ! -s /tmp/apk-paths.txt ]; then
-            {
-              echo "PWD=$(pwd)"
-              echo "--- top-level ---"; ls -la | head -15
-              echo "--- app/build tree tail ---"; ls -R app/build 2>/dev/null | tail -80
-              echo "--- runner-wide search ---"; find "$RUNNER_TEMP" /home/runner -type f \( -name '*.apk' -o -name '*.aab' \) 2>/dev/null | head -30
-            } > /tmp/stage-diag.txt 2>&1 || true
-            while IFS= read -r L; do [ -n "$L" ] && echo "::error::$L"; done < <(grep -E '^(PWD|/|\./|app|build|drwx|total)' /tmp/stage-diag.txt | head -25)
-            echo "::error::=== gradle-release.log tail ==="
-            while IFS= read -r L; do [ -n "$L" ] && echo "::error::$L"; done < <(tail -n 35 /tmp/gradle-release.log 2>/dev/null)
-            exit 1
-          fi
-          while IFS= read -r f; do cp "$f" /tmp/apk/ 2>/dev/null || true; done < /tmp/apk-paths.txt
-          echo "--- staged ---"; ls -la /tmp/apk
-          ls /tmp/apk/*.apk /tmp/apk/*.aab >/dev/null 2>&1 || { echo "::error::no files staged"; exit 1; }
 
       - name: Upload debug APK artifact
         if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' }}
         uses: actions/upload-artifact@v4
         with:
           name: debug-apk
-          path: |
-            /tmp/apk
-            /tmp/apk-paths.txt
-          if-no-files-found: warn
+          path: app/build/outputs/apk/foss/debug/*.apk
+          if-no-files-found: error
 
       - name: Upload release APKs artifact
         if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
         uses: actions/upload-artifact@v4
         with:
           name: release-apks
-          path: |
-            /tmp/apk
-            /tmp/apk-paths.txt
-          if-no-files-found: warn
+          path: app/build/outputs/apk/foss/release/*.apk
+          if-no-files-found: error
 
-      # 打 tag 时同步发布 GitHub Release(携带 foss release APK,取自 staging 目录)。
-      # continue-on-error:Release 创建需要 GITHUB_TOKEN 具备 contents:write 权限
-      # (仓库默认权限足够;若设为 read-only,或同名 Release 已存在,此步会失败)。
-      # 失败仅留 run 告警、不把已成功的构建标红,便于人工补发。
+      # 打 tag 时发布 GitHub Release(携带 release APK)
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cd /tmp/apk
-          ls *.apk *.aab >/dev/null 2>&1 || { echo "::error::No APK/AAB staged in /tmp/apk"; exit 1; }
-          # --generate-notes 由 gh 依据 commit/PR 自动生成;失败时降级为纯文件发布
+          cd app/build/outputs/apk/foss/release
+          ls *.apk *.aab >/dev/null 2>&1 || { echo "::error::No APK/AAB in release output"; exit 1; }
           gh release create "$GITHUB_REF_NAME" *.apk *.aab --generate-notes || \
             gh release create "$GITHUB_REF_NAME" *.apk *.aab
 
-      # 任意步骤失败后的统一上报(置于末尾,failure 时才触发):上传 Gradle 日志/staging 诊断为 artifact,并尝试写 commit status
-      - name: Publish failure diagnostics artifact
+      # 任意步骤失败后的统一上报(末尾,failure 触发):上传 gradle 日志 artifact,并尝试写 commit status
+      - name: Publish failure log artifact
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: gradle-build-log
-          path: |
-            /tmp/gradle-*.log
-            /tmp/stage-diag.txt
-            /tmp/apk-paths.txt
+          path: /tmp/gradle-*.log
           if-no-files-found: ignore
 
       - name: Report failure summary as commit status
@@ -169,13 +112,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          DESC=""
-          if [ -f /tmp/stage-diag.txt ]; then
-            DESC=$(tail -c 600 /tmp/stage-diag.txt | tr '\n' ' ' | tr -s ' ' | cut -c1-130)
-          elif LOG=$(ls /tmp/gradle-*.log 2>/dev/null | head -1); then
+          LOG=$(ls /tmp/gradle-*.log 2>/dev/null | head -1)
+          if [ -n "$LOG" ]; then
             DESC=$(grep -m1 -A3 -E "FAILURE|What went wrong|Caused by|error:|Exception" "$LOG" | head -6 | tr '\n' ' ' | cut -c1-130)
-          fi
-          if [ -n "$DESC" ]; then
             gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
               -f state=failure -f context="android-build-log" \
               -f description="$DESC" >/dev/null 2>&1 || true
