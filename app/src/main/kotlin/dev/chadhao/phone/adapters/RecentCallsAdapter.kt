@@ -93,6 +93,7 @@ import dev.chadhao.phone.helpers.CURRENT_RECENT_CALL
 import dev.chadhao.phone.helpers.CURRENT_RECENT_CALL_LIST
 import dev.chadhao.phone.helpers.ContactNameFormatter
 import dev.chadhao.phone.helpers.ContactSearchIndex
+import dev.chadhao.phone.helpers.SEARCH_HIGHLIGHT_COLOR
 import dev.chadhao.phone.helpers.applyRangeHighlight
 import dev.chadhao.phone.helpers.FILTER_RECENT_CALLS_ALL
 import dev.chadhao.phone.helpers.FILTER_RECENT_CALLS_CONTACTS
@@ -705,7 +706,7 @@ class RecentCallsAdapter(
                 }
 
                 if (textToHighlight.isNotEmpty() && nameToShow.contains(textToHighlight, true)) {
-                    nameToShow = nameToShow.toString().highlightTextPart(textToHighlight, properPrimaryColor)
+                    nameToShow = nameToShow.toString().highlightTextPart(textToHighlight, SEARCH_HIGHLIGHT_COLOR)
                 } else if (textToHighlight.isNotEmpty() && PinyinConverter.containsChinese(name) && textToHighlight.any { it.isLetterOrDigit() }) {
                     // Pinyin/T9 name match: paint the corresponding Chinese characters blue.
                     val ranges = ContactSearchIndex.highlightRanges(
@@ -713,7 +714,7 @@ class RecentCallsAdapter(
                         textToHighlight,
                         textToHighlight.all { it.isDigit() } && textToHighlight.isNotEmpty()
                     )
-                    if (!ranges.isNullOrEmpty()) nameToShow = applyRangeHighlight(name, ranges, properPrimaryColor)
+                    if (!ranges.isNullOrEmpty()) nameToShow = applyRangeHighlight(name, ranges, SEARCH_HIGHLIGHT_COLOR)
                 }
 
                 if (call.groupedCalls != null) {
@@ -733,7 +734,7 @@ class RecentCallsAdapter(
                 var numberToShow =
                     if (formatPhoneNumbers) SpannableString(call.phoneNumber.formatPhoneNumber()) else SpannableString(call.phoneNumber)
                 if (textToHighlight.isNotEmpty() && numberToShow.contains(textToHighlight, true)) {
-                    numberToShow = SpannableString(numberToShow.toString().highlightTextPart(textToHighlight, properPrimaryColor))
+                    numberToShow = SpannableString(numberToShow.toString().highlightTextPart(textToHighlight, SEARCH_HIGHLIGHT_COLOR))
                 }
 
                 itemRecentsNumber.apply {
@@ -948,7 +949,7 @@ class RecentCallsAdapter(
                 }
 
                 if (textToHighlight.isNotEmpty() && nameToShow.contains(textToHighlight, true)) {
-                    nameToShow = nameToShow.toString().highlightTextPart(textToHighlight, properPrimaryColor)
+                    nameToShow = nameToShow.toString().highlightTextPart(textToHighlight, SEARCH_HIGHLIGHT_COLOR)
                 } else if (textToHighlight.isNotEmpty() && PinyinConverter.containsChinese(name) && textToHighlight.any { it.isLetterOrDigit() }) {
                     // Pinyin/T9 name match: paint the corresponding Chinese characters blue.
                     val ranges = ContactSearchIndex.highlightRanges(
@@ -956,7 +957,7 @@ class RecentCallsAdapter(
                         textToHighlight,
                         textToHighlight.all { it.isDigit() } && textToHighlight.isNotEmpty()
                     )
-                    if (!ranges.isNullOrEmpty()) nameToShow = applyRangeHighlight(name, ranges, properPrimaryColor)
+                    if (!ranges.isNullOrEmpty()) nameToShow = applyRangeHighlight(name, ranges, SEARCH_HIGHLIGHT_COLOR)
                 }
 
                 if (call.groupedCalls != null) {
@@ -976,7 +977,7 @@ class RecentCallsAdapter(
                 var numberToShow =
                     if (formatPhoneNumbers) SpannableString(call.phoneNumber.formatPhoneNumber()) else SpannableString(call.phoneNumber)
                 if (textToHighlight.isNotEmpty() && numberToShow.contains(textToHighlight, true)) {
-                    numberToShow = SpannableString(numberToShow.toString().highlightTextPart(textToHighlight, properPrimaryColor))
+                    numberToShow = SpannableString(numberToShow.toString().highlightTextPart(textToHighlight, SEARCH_HIGHLIGHT_COLOR))
                 }
 
                 itemRecentsNumber.apply {
@@ -1322,7 +1323,9 @@ class RecentCallsAdapter(
 
     private fun swipedCall(call: RecentCall) {
         if (activity.config.showCallConfirmation) {
-            CallConfirmationDialog(activity as SimpleActivity, call.name) {
+            // Cached rows written before the surname-first fix may still hold a spaced/reversed
+            // Chinese name; normalise it again at confirmation time (idempotent for fresh data).
+            CallConfirmationDialog(activity as SimpleActivity, ContactNameFormatter.formatDisplayName(call.name)) {
                 callRecentNumber(call)
             }
         } else {

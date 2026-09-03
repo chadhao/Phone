@@ -6,6 +6,12 @@ import android.text.style.ForegroundColorSpan
 import com.goodwy.commons.models.contacts.Contact
 
 /**
+ * Explicit blue used to paint search-match spans (matched phone-number segments and matched
+ * Chinese characters alike), independent of the active theme's primary colour. Material Blue 600.
+ */
+val SEARCH_HIGHLIGHT_COLOR: Int = 0xFF1E88E5.toInt()
+
+/**
  * Paints [ranges] (character offsets inside [text]) with [color].
  * Out-of-range / malformed ranges are skipped instead of crashing a bind path.
  */

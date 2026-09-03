@@ -1493,7 +1493,10 @@ class CallHistoryActivity : SimpleActivity() {
 
             callHistoryPlaceholderContainer?.beGone()
 
-            val name = call.name
+            // Old recent-call caches may still hold a spaced/reversed Chinese name; normalise at
+            // display time. When the underlying contact is loaded, prefer its structured fields.
+            val name = contact?.let { ContactNameFormatter.format(it) }
+                ?: ContactNameFormatter.formatDisplayName(call.name)
             val formatPhoneNumbers = config.formatPhoneNumbers
             val nameToShow = if (name == call.phoneNumber && formatPhoneNumbers) {
                 SpannableString(name.formatPhoneNumber())
@@ -1632,7 +1635,7 @@ class CallHistoryActivity : SimpleActivity() {
     private fun makeCall(call: RecentCall, prefix: String = "") {
         val phoneNumber = call.phoneNumber
         if (config.showCallConfirmation) {
-            CallConfirmationDialog(this as SimpleActivity, call.name) {
+            CallConfirmationDialog(this as SimpleActivity, ContactNameFormatter.formatDisplayName(call.name)) {
                 launchCallIntent("$prefix$phoneNumber", key = BuildConfig.RIGHT_APP_KEY)
             }
         } else {

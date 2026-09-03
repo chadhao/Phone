@@ -462,18 +462,18 @@ class ContactsAdapter(
                     val normalizedName = name.normalizeString()
                     val normalizedSearchText = textToHighlight.normalizeString()
                     nameToShow = if (normalizedName.contains(normalizedSearchText, true)) {
-                        name.highlightTextPart(normalizedSearchText, properPrimaryColor)
+                        name.highlightTextPart(normalizedSearchText, SEARCH_HIGHLIGHT_COLOR)
                     } else if (PinyinConverter.containsChinese(name)) {
                         // Pinyin/T9 match: paint the corresponding Han characters (they are not literal query text).
                         val isDigitQuery = textToHighlight.all { it.isDigit() }
                         val ranges = ContactSearchIndex.highlightRanges(name, textToHighlight, isDigitQuery)
-                        if (ranges.isNullOrEmpty()) name else applyRangeHighlight(name, ranges, properPrimaryColor)
+                        if (ranges.isNullOrEmpty()) name else applyRangeHighlight(name, ranges, SEARCH_HIGHLIGHT_COLOR)
                     } else {
                         val langPref = activity.config.dialpadSecondaryLanguage ?: ""
                         val langLocale = Locale.getDefault().language
                         val isAutoLang = DialpadT9.getSupportedSecondaryLanguages().contains(langLocale) && langPref == LANGUAGE_SYSTEM
                         val lang = if (isAutoLang) langLocale else langPref
-                        name.highlightTextFromNumbers(textToHighlight, properPrimaryColor, lang)
+                        name.highlightTextFromNumbers(textToHighlight, SEARCH_HIGHLIGHT_COLOR, lang)
                     }
                 }
                 text = nameToShow
@@ -490,7 +490,7 @@ class ContactsAdapter(
                 }
                 val numberText = phoneNumberToUse?.value ?: ""
                 text = if (textToHighlight.isEmpty()) numberText else numberText.highlightTextPart(
-                    textToHighlight, properPrimaryColor,
+                    textToHighlight, SEARCH_HIGHLIGHT_COLOR,
                     highlightAll = false,
                     ignoreCharsBetweenDigits = true
                 )

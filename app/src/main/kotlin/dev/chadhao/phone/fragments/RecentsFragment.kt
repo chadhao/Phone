@@ -383,10 +383,20 @@ class RecentsFragment(
             val isAutoLang = DialpadT9.getSupportedSecondaryLanguages().contains(langLocale) && langPref == LANGUAGE_SYSTEM
             val lang = if (isAutoLang) langLocale else langPref
 
+            // Full-contact pinyin/T9 matches first; their scores tell us the match tier (name vs number).
+            val cachedContacts = (activity as MainActivity).cachedContacts
+            val indexMatches = ContactSearchIndex.queryDigits(fixedText, cachedContacts)
+            val scoreByContactId = HashMap<Int, Int>()
+            indexMatches.forEach { scoreByContactId[it.contact.id] = it.score }
+
             // 1) Recent calls matched the old way (keeps Latin T9 + nickname/company/job behaviour).
-            val recentCalls = allRecentCalls
+            //    Each row is tagged with its best tier so the merge can put pinyin-name hits ahead of
+            //    number-substring hits ahead of leftover fuzzy matches (requirement: 姓名 > 号码).
+            val recentNumberDigits = HashSet<String>()
+            val recentHits = ArrayList<DialpadHit>()
+            allRecentCalls
                 .filterIsInstance<RecentCall>()
-                .filter { recentCall ->
+                .forEach { recentCall ->
                     val convertedName = DialpadT9.convertLettersToNumbers(
                         recentCall.name.normalizeString().uppercase(), lang)
                     val convertedNameDigitsOnly = convertedName.filter { it.isDigit() }
@@ -399,40 +409,53 @@ class RecentsFragment(
                     val convertedJobPosition = DialpadT9.convertLettersToNumbers(
                         recentCall.jobPosition.normalizeString().uppercase(), lang)
 
-                    recentCall.doesContainPhoneNumber(fixedText)
-                        || (convertedName.contains(fixedText, true))
-                        || (convertedNameDigitsOnly.contains(fixedText, true))
-                        || (convertedNickname.contains(fixedText, true))
-                        || (convertedNicknameDigitsOnly.contains(fixedText, true))
-                        || (convertedCompany.contains(fixedText, true))
-                        || (convertedCompanyDigitsOnly.contains(fixedText, true))
-                        || (convertedJobPosition.contains(fixedText, true))
+                    val numberHit = recentCall.doesContainPhoneNumber(fixedText)
+                    val nameDigitsHit = convertedName.contains(fixedText, true) || convertedNameDigitsOnly.contains(fixedText, true)
+                    val otherHit = convertedNickname.contains(fixedText, true) || convertedNicknameDigitsOnly.contains(fixedText, true) ||
+                        convertedCompany.contains(fixedText, true) || convertedCompanyDigitsOnly.contains(fixedText, true) ||
+                        convertedJobPosition.contains(fixedText, true)
+
+                    if (!numberHit && !nameDigitsHit && !otherHit) return@forEach
+
+                    recentNumberDigits.add(recentCall.phoneNumber.filter { char -> char.isDigit() })
+                    val indexScore = recentCall.contactID?.let { scoreByContactId[it] }
+                    val indexNameHit = indexScore != null && ContactSearchIndex.isNameTierScore(indexScore)
+                    val indexNumberHit = indexScore != null && !ContactSearchIndex.isNameTierScore(indexScore)
+                    recentHits.add(
+                        DialpadHit(
+                            call = recentCall,
+                            isNameHit = nameDigitsHit || indexNameHit,
+                            isNumberHit = numberHit || indexNumberHit,
+                        )
+                    )
                 }
-                .sortedWith(
-                    compareByDescending<RecentCall> { it.dayCode }
-                        .thenByDescending { it.name.startsWith(fixedText, true) }
-                        .thenByDescending { it.startTS }
+
+            // 2) Contacts matched only through the pinyin index and not already shown by a recent row.
+            val virtualHits = ArrayList<DialpadHit>()
+            for (match in indexMatches) {
+                val contact = match.contact
+                val contactNumberDigits = contact.phoneNumbers.mapNotNull { number ->
+                    number.value.filter { char -> char.isDigit() }.takeIf { it.isNotEmpty() }
+                }
+                if (contactNumberDigits.isEmpty()) continue
+                // Skip contacts whose any number is already shown by a recent-call row.
+                if (contactNumberDigits.any { it in recentNumberDigits }) continue
+                val nameTier = ContactSearchIndex.isNameTierScore(match.score)
+                virtualHits.add(
+                    DialpadHit(call = contact.toVirtualRecentCall(), isNameHit = nameTier, isNumberHit = !nameTier)
                 )
+            }
 
-            // 2) Full-contact pinyin/T9 matches (search scope extension, design §2/§8).
-            //    Contacts already represented by a recent-call row are skipped to avoid duplicates.
-            val cachedContacts = (activity as MainActivity).cachedContacts
-            val recentNumberDigits = recentCalls
-                .mapTo(HashSet()) { it.phoneNumber.filter { char -> char.isDigit() } }
-            val virtualCalls = ContactSearchIndex.queryDigits(fixedText, cachedContacts)
-                .asSequence()
-                .map { it.contact }
-                .filter { contact ->
-                    val contactNumberDigits = contact.phoneNumbers.mapNotNull { number ->
-                        number.value.filter { char -> char.isDigit() }.takeIf { it.isNotEmpty() }
-                    }
-                    // Skip contacts whose any number is already shown by a recent-call row.
-                    contactNumberDigits.isNotEmpty() && contactNumberDigits.none { it in recentNumberDigits }
-                }
-                .map { it.toVirtualRecentCall() }
-                .toList()
+            // 3) Merge: name (pinyin initials/full) hits first, then number-substring hits, then the
+            //    leftover nickname/company/job hits; recency is preserved inside every group.
+            val mergedCalls = (recentHits + virtualHits)
+                .sortedWith(
+                    compareBy<DialpadHit> { hit -> if (hit.isNameHit) 0 else if (hit.isNumberHit) 1 else 2 }
+                        .thenByDescending { it.call.dayCode }
+                        .thenByDescending { it.call.startTS }
+                )
+                .map { it.call }
 
-            val mergedCalls = recentCalls + virtualCalls
             prepareCallLog(mergedCalls) {
                 activity?.runOnUiThread {
                     showOrHidePlaceholder(mergedCalls.isEmpty())
@@ -726,7 +749,7 @@ class RecentsFragment(
     private fun actionCall(call: RecentCall) {
         val recentCall = call
         if (context.config.showCallConfirmation) {
-            CallConfirmationDialog(activity as SimpleActivity, recentCall.name) {
+            CallConfirmationDialog(activity as SimpleActivity, ContactNameFormatter.formatDisplayName(recentCall.name)) {
                 callRecentNumber(recentCall)
             }
         } else {
@@ -756,6 +779,13 @@ class RecentsFragment(
         }
     }
 }
+
+/** A dialpad search hit tagged with its match tier so merged results can sort 姓名 > 号码 > 其它. */
+private data class DialpadHit(
+    val call: RecentCall,
+    val isNameHit: Boolean,
+    val isNumberHit: Boolean,
+)
 
 class BottomSpaceDecoration(private val spaceHeight: Int) : RecyclerView.ItemDecoration() {
     override fun getItemOffsets(

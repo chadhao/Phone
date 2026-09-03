@@ -93,12 +93,24 @@ object ContactSearchIndex {
     fun abbreviationFor(contactId: Int): String? = records[contactId]?.abbr?.takeIf { it.isNotEmpty() }
 
     /**
+     * True when [score] belongs to the name (pinyin initials/full) tier, false when it belongs to
+     * the phone-number tier. Used by callers that group merged dialpad results so that pinyin-name
+     * hits are always shown before pure number-substring hits.
+     */
+    fun isNameTierScore(score: Int): Boolean = score >= NAME_MATCH_BONUS
+
+    /**
      * Computes character ranges of a display [name] whose pinyin initials/full syllables match [query]
      * (letters or T9 digits). Used to paint the *matched Chinese characters* blue when the typed query
      * does not literally appear inside the name. Returns null when the query cannot be aligned to the name.
      *
      * Only pure-character positions are reported: a matched Han char covers exactly itself; a matched
      * Latin word covers the whole word. Ranges are relative to [name].
+     *
+     * Polyphonic Han chars contribute ALL their readings to the alignment stream (a char keeps one
+     * position, but every reading's letters are concatenated on it), mirroring the way the index
+     * accepts any reading. Aligning against all readings can occasionally over-mark a whole char when
+     * a query spans two readings of the same character; that is the accepted trade-off (宁多标,不漏标).
      */
     fun highlightRanges(name: String, query: String, isDigitsQuery: Boolean): List<IntRange>? {
         val q = if (isDigitsQuery) query.filter { it.isDigit() } else query.lowercase()
@@ -116,8 +128,10 @@ object ContactSearchIndex {
             if (readings.isNotEmpty()) {
                 starts.add(i)
                 ends.add(i + 1)
-                initialLetters.add(readings.first().substring(0, 1))
-                fullLetters.add(readings.first())
+                // All readings, not just the first one: a contact may have been matched through any
+                // reading, and the matched Han char must be highlighted regardless of pinyin order.
+                initialLetters.add(readings.map { it.substring(0, 1) }.distinct().joinToString(""))
+                fullLetters.add(readings.joinToString(""))
                 i++
             } else if (char.isLetter()) {
                 val wordStart = i
