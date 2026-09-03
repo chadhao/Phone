@@ -95,14 +95,39 @@ jobs:
           echo "Keystore decoded to $SIGNING_STORE_FILE"
 
       # 常规 push / PR:只构建 gplay debug,快速验证可编译
+      # 默认 shell 带 -eo pipefail:gradle 失败时管道整体返回非零,日志已写入 /tmp
       - name: Build debug APK (gplay)
         if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' }}
-        run: ./gradlew assembleGplayDebug --no-daemon
+        run: ./gradlew assembleGplayDebug --no-daemon 2>&1 | tee /tmp/gradle-debug.log
 
       # tag 或手动触发:构建全部 4 个渠道 release(minify + 签名/未签名)
       - name: Build release APKs (all flavors)
         if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease --no-daemon 2>&1 | tee /tmp/gradle-release.log
+
+      # 构建失败时:上传 Gradle 日志为 artifact,并把错误摘要写入 commit status(匿名可读,便于无 token 排查)
+      - name: Publish failure log artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: /tmp/gradle-*.log
+          if-no-files-found: ignore
+
+      - name: Report failure summary as commit status
+        if: failure()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LOG=$(ls /tmp/gradle-*.log 2>/dev/null | head -1)
+          if [ -n "$LOG" ]; then
+            DESC=$(grep -m1 -A3 -E "FAILURE|What went wrong|Caused by|error:|Exception" "$LOG" | head -6 | tr '\n' ' ' | cut -c1-130)
+            gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+              -f state=failure -f context="android-build-log" \
+              -f description="$DESC" >/dev/null 2>&1 || true
+          fi
+          exit 0
 
       - name: Upload debug APK artifact
         if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' }}
