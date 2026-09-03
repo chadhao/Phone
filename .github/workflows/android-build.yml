@@ -79,6 +79,8 @@ jobs:
               echo "--- runner-wide search ---"; find "$RUNNER_TEMP" /home/runner -type f \( -name '*.apk' -o -name '*.aab' \) 2>/dev/null | head -30
             } > /tmp/stage-diag.txt 2>&1 || true
             while IFS= read -r L; do [ -n "$L" ] && echo "::error::$L"; done < <(grep -E '^(PWD|/|\./|app|build|drwx|total)' /tmp/stage-diag.txt | head -25)
+            echo "::error::=== gradle-debug.log tail ==="
+            while IFS= read -r L; do [ -n "$L" ] && echo "::error::$L"; done < <(tail -n 35 /tmp/gradle-debug.log 2>/dev/null)
             exit 1
           fi
           while IFS= read -r f; do cp "$f" /tmp/apk/ 2>/dev/null || true; done < /tmp/apk-paths.txt
@@ -101,6 +103,8 @@ jobs:
               echo "--- runner-wide search ---"; find "$RUNNER_TEMP" /home/runner -type f \( -name '*.apk' -o -name '*.aab' \) 2>/dev/null | head -30
             } > /tmp/stage-diag.txt 2>&1 || true
             while IFS= read -r L; do [ -n "$L" ] && echo "::error::$L"; done < <(grep -E '^(PWD|/|\./|app|build|drwx|total)' /tmp/stage-diag.txt | head -25)
+            echo "::error::=== gradle-release.log tail ==="
+            while IFS= read -r L; do [ -n "$L" ] && echo "::error::$L"; done < <(tail -n 35 /tmp/gradle-release.log 2>/dev/null)
             exit 1
           fi
           while IFS= read -r f; do cp "$f" /tmp/apk/ 2>/dev/null || true; done < /tmp/apk-paths.txt
