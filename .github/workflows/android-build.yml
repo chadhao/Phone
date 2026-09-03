@@ -86,7 +86,9 @@ jobs:
               echo "--- runner-wide search ---"
               find "$RUNNER_TEMP" /home/runner /tmp -type f \( -name '*.apk' -o -name '*.aab' \) 2>/dev/null | head -40
             } > /tmp/stage-diag.txt 2>&1 || true
-            cat /tmp/stage-diag.txt
+            echo "::error::No APK/AAB staged; diagnostics below"
+            # 逐行注入 annotation,供匿名 API 经 check-run annotations 读取
+            while IFS= read -r L; do [ -n "$L" ] && echo "::error::$L"; done < <(tail -n 30 /tmp/stage-diag.txt)
             exit 1
           fi
           while IFS= read -r f; do cp "$f" /tmp/apk/ 2>/dev/null || true; done < /tmp/apk-paths.txt
