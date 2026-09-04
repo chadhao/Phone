@@ -486,14 +486,15 @@ class ContactsAdapter(
                 val phoneNumberToUse = if (textToHighlight.isEmpty()) {
                     contact.phoneNumbers.firstOrNull { it.isPrimary } ?: contact.phoneNumbers.firstOrNull()
                 } else {
-                    contact.phoneNumbers.firstOrNull { it.value.contains(textToHighlight) } ?: contact.phoneNumbers.firstOrNull()
+                    // Digit-normalised match: pick the number whose digits actually contain the query
+                    // digits, so stored values with +86/space/hyphen separators are chosen correctly.
+                    contact.phoneNumbers.firstOrNull { PhoneNumberHighlight.containsNumberDigits(it.value, textToHighlight) }
+                        ?: contact.phoneNumbers.firstOrNull()
                 }
                 val numberText = phoneNumberToUse?.value ?: ""
-                text = if (textToHighlight.isEmpty()) numberText else numberText.highlightTextPart(
-                    textToHighlight, SEARCH_HIGHLIGHT_COLOR,
-                    highlightAll = false,
-                    ignoreCharsBetweenDigits = true
-                )
+                // Same shared mapping as the dialpad quick-search rows: digit-normalised contains →
+                // full-segment span on the displayed string (see PhoneNumberHighlight).
+                text = if (textToHighlight.isEmpty()) numberText else PhoneNumberHighlight.highlightNumberMatch(numberText, textToHighlight, SEARCH_HIGHLIGHT_COLOR)
             }
             itemContactInfo?.applyColorFilter(accentColor)
             itemContactInfoHolder?.apply {

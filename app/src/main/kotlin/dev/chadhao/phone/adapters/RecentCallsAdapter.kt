@@ -97,6 +97,7 @@ import dev.chadhao.phone.helpers.SEARCH_HIGHLIGHT_COLOR
 import dev.chadhao.phone.helpers.applyRangeHighlight
 import dev.chadhao.phone.helpers.FILTER_RECENT_CALLS_ALL
 import dev.chadhao.phone.helpers.FILTER_RECENT_CALLS_CONTACTS
+import dev.chadhao.phone.helpers.PhoneNumberHighlight
 import dev.chadhao.phone.helpers.PinyinConverter
 import dev.chadhao.phone.helpers.RecentsHelper
 import dev.chadhao.phone.helpers.SWIPE_ACTION_BLOCK
@@ -735,11 +736,14 @@ class RecentCallsAdapter(
                     ellipsize = ellipsizeConfig
                 }
 
-                var numberToShow =
-                    if (formatPhoneNumbers) SpannableString(call.phoneNumber.formatPhoneNumber()) else SpannableString(call.phoneNumber)
-                if (textToHighlight.isNotEmpty() && numberToShow.contains(textToHighlight, true)) {
-                    numberToShow = SpannableString(numberToShow.toString().highlightTextPart(textToHighlight, SEARCH_HIGHLIGHT_COLOR))
-                }
+                // Number line: paint the matched digit sequence as ONE full segment on the displayed
+                // string (formatted or raw). A literal contains() on the formatted string would break
+                // for >=4-digit queries once formatPhoneNumbers inserts spaces (see PhoneNumberHighlight).
+                val numberToShow: CharSequence = PhoneNumberHighlight.highlightNumberMatch(
+                    if (formatPhoneNumbers) call.phoneNumber.formatPhoneNumber() else call.phoneNumber,
+                    textToHighlight,
+                    SEARCH_HIGHLIGHT_COLOR
+                )
 
                 itemRecentsNumber.apply {
                     setTextColor(textColor)
@@ -980,11 +984,14 @@ class RecentCallsAdapter(
                     ellipsize = ellipsizeConfig
                 }
 
-                var numberToShow =
-                    if (formatPhoneNumbers) SpannableString(call.phoneNumber.formatPhoneNumber()) else SpannableString(call.phoneNumber)
-                if (textToHighlight.isNotEmpty() && numberToShow.contains(textToHighlight, true)) {
-                    numberToShow = SpannableString(numberToShow.toString().highlightTextPart(textToHighlight, SEARCH_HIGHLIGHT_COLOR))
-                }
+                // Number line: paint the matched digit sequence as ONE full segment on the displayed
+                // string (formatted or raw). A literal contains() on the formatted string would break
+                // for >=4-digit queries once formatPhoneNumbers inserts spaces (see PhoneNumberHighlight).
+                val numberToShow: CharSequence = PhoneNumberHighlight.highlightNumberMatch(
+                    if (formatPhoneNumbers) call.phoneNumber.formatPhoneNumber() else call.phoneNumber,
+                    textToHighlight,
+                    SEARCH_HIGHLIGHT_COLOR
+                )
 
                 itemRecentsNumber.apply {
                     setTextColor(textColor)
