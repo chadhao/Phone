@@ -107,6 +107,7 @@ import dev.chadhao.phone.helpers.SWIPE_ACTION_NONE
 import dev.chadhao.phone.helpers.SWIPE_ACTION_WHATSAPP
 import dev.chadhao.phone.helpers.callLogBodyPx
 import dev.chadhao.phone.helpers.isCallTimestampRenderable
+import dev.chadhao.phone.helpers.resolvedBlockedAt
 import dev.chadhao.phone.interfaces.RefreshItemsListener
 import dev.chadhao.phone.models.CallLogItem
 import dev.chadhao.phone.models.RecentCall
@@ -759,19 +760,25 @@ class RecentCallsAdapter(
                     text = if (name != call.phoneNumber && textToHighlight.isNotEmpty()) numberToShow else formatterUnicodeWrap(recentsNumber)
                 }
 
+                // N1: blocked rows prefer the local interception time, others keep the CallLog time.
+                val callTimestamp: Long? = if (call.blockReason != 0) {
+                    call.resolvedBlockedAt(activity.config)
+                } else {
+                    call.startTS.takeIf { it.isCallTimestampRenderable() }
+                }
                 itemRecentsDateTime.apply {
-                    text = if (!call.startTS.isCallTimestampRenderable()) {
+                    text = if (callTimestamp == null) {
                         "-"
                     } else if (activity.config.useRelativeDate) {
                         DateUtils.getRelativeDateTimeString(
                             context,
-                            call.startTS,
+                            callTimestamp,
                             1.minutes.inWholeMilliseconds,
                             2.days.inWholeMilliseconds,
                             0,
                         )
                     } else {
-                        call.startTS.formatDateOrTime(context, hideTimeOnOtherDays = hideTimeAtOtherDays, false)
+                        callTimestamp.formatDateOrTime(context, hideTimeOnOtherDays = hideTimeAtOtherDays, false)
                     }
                     setTextColor(textColor)
                     setTextSize(TypedValue.COMPLEX_UNIT_PX, activity.callLogBodyPx())
@@ -1007,19 +1014,25 @@ class RecentCallsAdapter(
                     text = if (name != call.phoneNumber && textToHighlight.isNotEmpty()) numberToShow else formatterUnicodeWrap(recentsNumber)
                 }
 
+                // N1: blocked rows prefer the local interception time, others keep the CallLog time.
+                val callTimestamp: Long? = if (call.blockReason != 0) {
+                    call.resolvedBlockedAt(activity.config)
+                } else {
+                    call.startTS.takeIf { it.isCallTimestampRenderable() }
+                }
                 itemRecentsDateTime.apply {
-                    text = if (!call.startTS.isCallTimestampRenderable()) {
+                    text = if (callTimestamp == null) {
                         "-"
                     } else if (activity.config.useRelativeDate) {
                         DateUtils.getRelativeDateTimeString(
                             context,
-                            call.startTS,
+                            callTimestamp,
                             1.minutes.inWholeMilliseconds,
                             2.days.inWholeMilliseconds,
                             0,
                         )
                     } else {
-                        call.startTS.formatDateOrTime(context, hideTimeOnOtherDays = hideTimeAtOtherDays, false)
+                        callTimestamp.formatDateOrTime(context, hideTimeOnOtherDays = hideTimeAtOtherDays, false)
                     }
                     setTextColor(textColor)
                     setTextSize(TypedValue.COMPLEX_UNIT_PX, activity.callLogBodyPx())

@@ -37,7 +37,6 @@ class SettingsActivity : SimpleActivity() {
         private val IMPORT_CALL_HISTORY_FILE_TYPES = buildList {
             add("application/json")
             if (!isQPlus()) {
-                // Workaround for https://github.com/FossifyOrg/Messages/issues/88
                 add("application/octet-stream")
             }
         }

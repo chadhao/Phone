@@ -227,7 +227,6 @@ fun Activity.startAddContactIntent(phoneNumber: String) {
     }
 }
 
-//Goodwy
 fun Context.updateUnreadCountBadge(count: Int) {
     if (count == 0) {
         ShortcutBadger.removeCount(this)

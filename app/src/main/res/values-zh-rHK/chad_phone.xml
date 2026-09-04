@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="transparent_call_screen_g">Transparent Call Screen</string>
+    <string name="call_back_g">Call back</string>
+    <string name="call_back_person_g">Call back %s</string>
+    <string name="missed_call_g">Missed call</string>
+    <string name="missed_calls_g">Missed calls</string>
+    <string name="missed_call_notifications_g">Missed call notifications</string>
+    <string name="call_start_end_vibration">Vibrate when your call is start and end</string>
+
+    <string name="dialpad_preferences">拨号萤幕设定</string>
+    <string name="show_contact_thumbnails_g">Show contact thumbnails</string>
+    <string name="hide_dialpad_letters_g">Hide dialpad letters</string>
+    <string name="show_caller_description_g">Show additional caller information</string>
+    <string name="nickname">Nickname</string>
+    <string name="company">Company</string>
+    <string name="call_anonymously">Call anonymously (with prefix #31#)</string>
+    <string name="call_anonymously_warning">
+        <![CDATA[
+            <h4>Warning</h4>
+            The number will be called with the prefix #31# <br><br>
+                <h6"><i>  #31#%s</i></h6>
+            Make sure that your operator supports the number hiding service when using the #31# prefix. <br>
+            Your service provider may charge an additional fee for this service.
+        ]]>
+    </string>
+
+    <string name="add_wait">添加等待（;）</string>
+    <string name="rejected">已拒绝</string>
+    <string name="dialpad_buttons_color">拨号盘按键颜色</string>
+    <string name="audio_route_earpiece_g">Device\'s earpiece</string>
+    <string name="open_speed_dial_manage">Open the speed dial manage?</string>
+
+    <!-- Timer -->
+    <string name="timer">Timer</string>
+    <string name="timers_notification_msg">Timers are running</string>
+    <plurals name="timer_notification_msg">
+        <item quantity="one">%d timer is running</item>
+        <item quantity="other">%d timers are running</item>
+    </plurals>
+
+    <!-- FAQ -->
+    <string name="faq_1_title_dialer_g">Why do I have to unlock my device to answer an incoming call?</string>
+    <string name="faq_1_text_dialer_g">Your operating system is blocking app access to the lock screen. You need to allow the app to access the lock screen. For example in MIUI you need to enable access in "Settings => Notifications => Lock screen notifications" and enable the "Open new windows while running in the background" permission.</string>
+    <string name="faq_2_title_dialer_g">How do I copy or paste a number on the dialing screen?</string>
+    <string name="faq_2_text_dialer_g">A long press on the call button will paste the clipboard contents. If you have already entered a number, long pressing the call button will copy the number to the clipboard.</string>
+
+    <!-- Answer style -->
+    <string name="slider_style">滑杆样式</string>
+    <string name="slider_style_summary">只有在萤幕锁定时才能使用滑杆。</string>
+    <string name="answer_style">Answer style</string>
+    <string name="buttons">Buttons</string>
+    <string name="answer_slider">Slider</string>
+    <string name="answer_slider_classic">经典滑杆</string>
+    <string name="answer_slider_outline">Outline slider</string>
+    <string name="answer_slider_vertical">Vertical slider</string>
+
+    <string name="show_recent_calls">显示并搜寻最近的通话记录</string>
+    <string name="search_contacts_in_dialpad">拨打电话时搜寻联络人</string>
+    <string name="open_dialpad_when_call_from_another_app">尝试从其他应用程式拨打电话时，打开拨号盘</string>
+    <string name="open_dialpad_when_call_from_another_app_summary">这可以保护您免受在您不知情的情况下拨打电话的恶意软体的侵害。</string>
+    <string name="number_of_recent_calls_displays">显示最近通话次数</string>
+    <string name="number_of_recent_calls_displays_summary">由于进行了分组，显示的行数可能会减少。</string>
+    <string name="group_calls">呼叫分组</string>
+    <string name="group_all_calls">将所有通话分组，仅显示最后一通通话</string>
+    <string name="call_button_style">铃铛按钮样式</string>
+    <string name="call_notes">通话记录</string>
+    <string name="back_pressed_end_call">Back 操作结束调用</string>
+    <string name="keep_calls_in_popup_summary">接听电话后，来电会保留在通知栏中，不会全萤幕显示。这样做是为了避免干扰其他应用，例如玩游戏时。</string>
+    <string name="turn_on_speaker_in_popup">自动开启扬声器</string>
+    <string name="turn_on_speaker_in_popup_summary">如果没有连接耳机，扬声器将自动开启。</string>
+    <string name="busy">忙碌的</string>
+    <string name="block_calls">拦截来电</string>
+    <string name="edit_number_before_call">通话前请先编辑号码</string>
+    <string name="on_favorite_click">当你点击收藏夹时</string>
+    <string name="call_using_same_sim">使用上一次（最后一次）通话时使用的同一张 SIM 卡</string>
+    <string name="answer_end_other_call">接听并结束当前通话</string>
+    <string name="quick_answers">快速解答</string>
+    <string name="voicemail">语音信箱</string>
+    <string name="show_voicemail_icon">显示语音邮件图示</string>
+    <string name="secondary_dialpad_language">辅助拨号盘语言</string>
+    <string name="sim_card_selection_dialog_style">SIM Select 对话框样式</string>
+    <string name="clear_dialpad_when_start_call">开始通话时清除被叫号码</string>
+
+    <!-- Notifications -->
+    <plurals name="missed_calls">
+        <item quantity="other">%d 个未接来电</item>
+    </plurals>
+    <string name="missed_call_from">Missed call from %s</string>
+    <string name="keep_calls_in_popup">在通知中留下通话</string>
+    <string name="on_contact_click">当您点击联络人时</string>
+    <string name="on_recent_click">点击最近的通话记录</string>
+    <string name="add_pause">新增 2 秒暂停（，）</string>
+    <string name="missed">错过</string>
+    <string name="incoming">即将到来</string>
+    <string name="outgoing">外向</string>
+</resources>

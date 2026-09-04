@@ -2,6 +2,10 @@
 <resources>
     <string name="default_phone_app_prompt">请将此应用程序设置为默认的通话程序</string>
     <string name="allow_displaying_over_other_apps">为了应用能稳定工作，请允许其显示在其他应用上方</string>
+
+    <!-- N2: default dialer guidance -->
+    <string name="default_dialer_guidance">Chad Phone 还不是系统默认拨号应用。设为默认才能可靠地拦截与接听来电。若无法跳转，请在系统设置中手动找到「默认应用 → 拨号应用」。</string>
+    <string name="set_as_default_dialer">设为默认</string>
     <string name="could_not_access_contacts">无法访问您的通讯录</string>
     <string name="no_previous_calls">未找到先前的通话</string>
     <string name="could_not_access_the_call_history">无法访问通话记录</string>
@@ -75,7 +79,8 @@
     <string name="faq_2_text">由于系统限制，紧急呼叫只能通过系统默认拨号器或电话应用拨打。为确保紧急呼叫正常工作，您需要保持系统应用安装并启用。</string>
     <string name="faq_2_title">为什么紧急呼叫无法正常工作？</string>
     <string name="faq_3_title">为什么应用中缺少我的一些联系人？</string>
-    <string name="faq_3_text">Fossify 电话仅显示有电话号码与之相关联的联系人。没有电话号码的联系人不会显示在应用中。</string>
+    <string name="faq_3_text_chad">Chad Phone 仅显示已关联电话号码的联系人。没有电话号码的联系人不会显示在应用中。</string>
+    <string name="faq_6_text">此问题通常由启动器不完全支持图标自定义引起。若可行，请尝试通过小组件启动应用，恢复默认应用图标颜色；极端情况下可能需要重新安装应用。</string>
     <string name="call_is_being_connected">正在连接您的通话…</string>
     <string name="call_notification_channel">通话状态</string>
     <string name="call_notification_channel_high_priority">通话状态（高优先级）</string>

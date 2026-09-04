@@ -10,6 +10,8 @@ import androidx.core.content.ContextCompat
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.goodwy.commons.helpers.BaseConfig
+import com.goodwy.commons.helpers.DEFAULT_TAB
+import com.goodwy.commons.helpers.TAB_CALL_HISTORY
 import dev.chadhao.phone.extensions.getPhoneAccountHandleModel
 import dev.chadhao.phone.extensions.putPhoneAccountHandle
 import dev.chadhao.phone.models.CallerNote
@@ -148,7 +150,6 @@ class Config(context: Context) : BaseConfig(context) {
         get() = prefs.getBoolean(ALWAYS_SHOW_FULLSCREEN, false)
         set(alwaysShowFullscreen) = prefs.edit { putBoolean(ALWAYS_SHOW_FULLSCREEN, alwaysShowFullscreen) }
 
-    //Goodwy
     var showIncomingCallsFullScreen: Boolean
         get() = prefs.getBoolean(SHOW_INCOMING_CALLS_FULL_SCREEN, true)
         set(showIncomingCallsFullScreen) = prefs.edit { putBoolean(SHOW_INCOMING_CALLS_FULL_SCREEN, showIncomingCallsFullScreen) }
@@ -244,6 +245,49 @@ class Config(context: Context) : BaseConfig(context) {
     fun parseRecentCallsCache(): ArrayList<RecentCall> {
         val listType = object : TypeToken<List<RecentCall>>() {}.type
         return Gson().fromJson<ArrayList<RecentCall>>(recentCallsCache, listType) ?: ArrayList(1)
+    }
+
+    /**
+     * Local interception timestamps (N1). Key = normalized phone number, value = epoch millis of the
+     * moment SimpleCallScreeningService blocked the call. Phone-local on purpose: the system
+     * BlockedNumbers provider cannot carry extra columns, and we never extend commons data models.
+     */
+    private var interceptedAtMap: HashMap<String, Long>
+        get() {
+            val mapType = object : TypeToken<HashMap<String, Long>>() {}.type
+            return Gson().fromJson(prefs.getString(INTERCEPTED_AT, ""), mapType) ?: HashMap()
+        }
+        set(interceptedAtMap) = prefs.edit { putString(INTERCEPTED_AT, Gson().toJson(interceptedAtMap)) }
+
+    /** Records the current system time for a blocked call (write point is SimpleCallScreeningService). */
+    fun recordInterceptedAt(number: String) {
+        if (number.isBlank()) return
+        val map = interceptedAtMap
+        map[normalizeInterceptedNumber(number)] = System.currentTimeMillis()
+        interceptedAtMap = map
+    }
+
+    /** Returns the locally recorded interception time for a number, if any. */
+    fun getInterceptedAt(number: String): Long? {
+        if (number.isBlank()) return null
+        val map = interceptedAtMap
+        map[normalizeInterceptedNumber(number)]?.let { return it }
+        // Fallback to the raw string for entries written before normalization settled.
+        return map[number]
+    }
+
+    private fun normalizeInterceptedNumber(number: String): String {
+        val decoded = Uri.decode(number).removePrefix("tel:")
+        return PhoneNumberUtils.normalizeNumber(decoded)
+    }
+
+    /**
+     * First-launch default tab (N2): only seeds when the user never explicitly chose a default tab
+     * (the prefs key is absent), so manual choices made in Settings are never reset. Uses the existing
+     * config.defaultTab semantics - TAB_CALL_HISTORY maps to the "Recent calls" tab in MainActivity.
+     */
+    fun seedDefaultTabIfUnset() {
+        if (!prefs.contains(DEFAULT_TAB)) defaultTab = TAB_CALL_HISTORY
     }
 
     var queryLimitRecent: Int

@@ -20,7 +20,6 @@ const val DIALPAD_BEEPS = "dialpad_beeps"
 const val DIALPAD_SECONDARY_LANGUAGE = "dialpad_secondary_language"
 const val HIDE_DIALPAD_NUMBERS = "hide_dialpad_numbers"
 const val ALWAYS_SHOW_FULLSCREEN = "always_show_fullscreen" // not used SHOW_INCOMING_CALLS_FULL_SCREEN
-//Goodwy
 const val SHOW_INCOMING_CALLS_FULL_SCREEN = "show_incoming_calls_full_screen"
 const val TRANSPARENT_CALL_SCREEN = "transparent_call_screen"
 const val HIDE_DIALPAD_LETTERS = "hide_dialpad_letters"
@@ -69,6 +68,7 @@ const val ON_FAVORITE_CLICK = "on_favorite_click"
 const val FILTER_RECENT_CALLS = "filter_recent_calls"
 const val DIALPAD_BUTTONS_COLOR = "dialpad_buttons_color"
 const val DIALPAD_BUTTONS_STYLE = "dialpad_buttons_style"
+const val INTERCEPTED_AT = "intercepted_at"
 
 const val ALL_TABS_MASK = TAB_CONTACTS or TAB_FAVORITES or TAB_CALL_HISTORY
 

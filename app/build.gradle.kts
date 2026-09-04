@@ -151,7 +151,7 @@ dependencies {
     implementation(libs.pinyin4j)
     detektPlugins(libs.compose.detekt)
 
-    // Goodwy Commons (Chad fork, foss only)
+    // Chad commons fork (foss only)
     implementation(libs.goodwy.commons.foss)
     implementation(libs.shortcut.badger)
     implementation(libs.behavio.rule)

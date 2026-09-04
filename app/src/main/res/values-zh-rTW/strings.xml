@@ -69,7 +69,6 @@
     <string name="faq_1_title">我听到来电，但萤幕没有亮起。我该怎么办？</string>
     <string name="faq_1_text">这种问题可能有许多与装置和系统特定的原因，一般来说很难确定。您应该查看您的装置设定，并确保 app 被允许在背景时弹出并允许在其他 app 上显示。</string>
     <string name="faq_3_title">为什么我的部分联络人从应用程序中消失了？</string>
-    <string name="faq_3_text">Fossify Phone 只会显示有电话号码的联络人。没有电话号码的联络人不会显示在应用程序中。</string>
     <string name="faq_2_text">因为系统限制，紧急电话只能透过系统预设的拨号程式或电话应用程序拨打。为了确保紧急通话正常运作，您需要维持系统应用程序已安装并启用。</string>
     <string name="call_is_being_connected">正在接通您的通话……</string>
     <string name="faq_2_title">为什么紧急电话无法正常运作？</string>

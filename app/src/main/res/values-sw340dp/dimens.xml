@@ -19,7 +19,6 @@
     <dimen name="dialpad_text_size">36sp</dimen>
     <dimen name="dialpad_key_text_size">30sp</dimen>
 
-    <!--Goodwy-->
     <dimen name="tab_layout_width">114dp</dimen>
     <dimen name="activity_padding_left_right">0dp</dimen>
     <dimen name="contact_padding_left">16dp</dimen>

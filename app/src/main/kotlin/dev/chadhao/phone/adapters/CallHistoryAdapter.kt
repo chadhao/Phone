@@ -17,6 +17,7 @@ import dev.chadhao.phone.extensions.*
 import dev.chadhao.phone.helpers.RecentsHelper
 import dev.chadhao.phone.helpers.callLogBodyPx
 import dev.chadhao.phone.helpers.isCallTimestampRenderable
+import dev.chadhao.phone.helpers.resolvedBlockedAt
 import dev.chadhao.phone.interfaces.RefreshItemsListener
 import dev.chadhao.phone.models.CallLogItem
 import dev.chadhao.phone.models.RecentCall
@@ -162,7 +163,10 @@ class CallHistoryAdapter(
 
                     R.id.cab_copy_date -> {
                         executeItemMenuOperation(callId) {
-                            val dateToCopy = if (call.startTS.isCallTimestampRenderable()) {
+                            val dateToCopy = if (call.blockReason != 0) {
+                                val ts = call.resolvedBlockedAt(activity.config)
+                                if (ts == null) "-" else ts.formatDateOrTime(activity, hideTimeOnOtherDays = hideTimeAtOtherDays, false)
+                            } else if (call.startTS.isCallTimestampRenderable()) {
                                 call.startTS.formatDateOrTime(activity, hideTimeOnOtherDays = hideTimeAtOtherDays, false)
                             } else {
                                 "-"
@@ -191,7 +195,10 @@ class CallHistoryAdapter(
         ) { _, _ ->
             binding.apply {
                 itemRecentsDateTime.apply {
-                    val date = if (call.startTS.isCallTimestampRenderable()) {
+                    val date = if (call.blockReason != 0) {
+                        val ts = call.resolvedBlockedAt(activity.config)
+                        if (ts == null) "-" else ts.formatDateOrTime(context, hideTimeOnOtherDays = hideTimeAtOtherDays, false)
+                    } else if (call.startTS.isCallTimestampRenderable()) {
                         call.startTS.formatDateOrTime(context, hideTimeOnOtherDays = hideTimeAtOtherDays, false)
                     } else {
                         "-"

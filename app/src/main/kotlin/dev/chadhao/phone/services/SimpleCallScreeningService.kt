@@ -79,6 +79,10 @@ class SimpleCallScreeningService : CallScreeningService() {
 
         // setSkipCallLog() does not work on many versions of Android, so let's update the list after blocking the call
         // https://issuetracker.google.com/issues/130081372
-        if (isBlocked) EventBus.getDefault().post(Events.RefreshCallLog)
+        if (isBlocked) {
+            // N1: record the real interception time before refreshing the list so the UI can render it.
+            callDetails.handle?.schemeSpecificPart?.let { config.recordInterceptedAt(it) }
+            EventBus.getDefault().post(Events.RefreshCallLog)
+        }
     }
 }

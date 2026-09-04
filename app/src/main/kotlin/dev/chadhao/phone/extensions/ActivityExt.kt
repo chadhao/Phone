@@ -48,7 +48,6 @@ fun Activity.startContactDetailsIntent(contact: Contact) {
     }
 }
 
-//Goodwy
 fun Activity.startContactEdit(contact: Contact) {
     Intent().apply {
         action = Intent.ACTION_EDIT
@@ -63,12 +62,10 @@ fun SimpleActivity.launchAbout() {
     val faqItems = arrayListOf(
         FAQItem(R.string.faq_1_title, R.string.faq_1_text),
         FAQItem(R.string.faq_2_title, R.string.faq_2_text),
-        FAQItem(R.string.faq_3_title, R.string.faq_3_text_g),
+        FAQItem(R.string.faq_3_title, R.string.faq_3_text_chad),
         FAQItem(R.string.faq_1_title_dialer_g, R.string.faq_1_text_dialer_g),
         FAQItem(R.string.faq_2_title_dialer_g, R.string.faq_2_text_dialer_g),
-        FAQItem(R.string.faq_2_title_commons, R.string.faq_2_text_commons_g),
-        FAQItem(R.string.faq_6_title_commons, R.string.faq_6_text_commons_g),
-        FAQItem(R.string.faq_7_title_commons, R.string.faq_7_text_commons),
+        FAQItem(R.string.faq_6_title_commons, R.string.faq_6_text),
         FAQItem(R.string.faq_9_title_commons, R.string.faq_9_text_commons)
     )
 

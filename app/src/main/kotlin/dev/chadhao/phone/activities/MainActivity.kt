@@ -137,6 +137,10 @@ class MainActivity : SimpleActivity() {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
         appLaunched(BuildConfig.APPLICATION_ID)
+        // N2: first launch (or first launch after an upgrade without an explicit choice) lands on
+        // the "Recent calls" tab. Only seeds when the user never picked a default tab, so the
+        // setting chosen manually in Settings is never overwritten.
+        config.seedDefaultTabIfUnset()
 
         val oneTabs: Boolean = getAllFragments().size == 1
         setupEdgeToEdge(
@@ -182,7 +186,7 @@ class MainActivity : SimpleActivity() {
                 }
             }
         } else {
-            launchSetDefaultDialerIntent()
+            showDefaultDialerGuidance()
         }
 
         if (isQPlus() && (baseConfig.blockUnknownNumbers || baseConfig.blockHiddenNumbers)) {
@@ -211,6 +215,30 @@ class MainActivity : SimpleActivity() {
         binding.mainCallButton.setOnClickListener { startActivity(Intent(this, CallActivity::class.java)) }
 
         initDialpad()
+    }
+
+    /**
+     * N2: in-app guidance shown on cold start while Chad Phone is not the system default dialer.
+     * Replaces the old behaviour of directly firing the system role picker every launch. Already
+     * authorized users never see it; dismissing the snackbar does not write any permanent flag, so
+     * the toast appears at most once per cold start.
+     */
+    private fun showDefaultDialerGuidance() {
+        val properBackgroundColor = getProperBackgroundColor()
+        val snackbar = Snackbar.make(
+            binding.mainHolder,
+            R.string.default_dialer_guidance,
+            Snackbar.LENGTH_LONG
+        ).setAction(R.string.set_as_default_dialer) {
+            launchSetDefaultDialerIntent()
+        }
+        snackbar.setBackgroundTint(properBackgroundColor.darkenColor())
+        val properTextColor = getProperTextColor()
+        snackbar.setTextColor(properTextColor)
+        snackbar.setActionTextColor(properTextColor)
+        val snackBarView: View = snackbar.view
+        snackBarView.translationY = -pixels(R.dimen.snackbar_bottom_margin)
+        snackbar.show()
     }
 
     override fun onResume() {

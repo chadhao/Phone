@@ -1,1 +1,1 @@
-A private, self-use phone dialer based on Right Dialer / Simple Dialer. No ads, no tracking, no in-app purchases.
+A private, self-use phone dialer for Chad. No ads, no tracking, no in-app purchases.

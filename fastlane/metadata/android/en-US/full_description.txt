@@ -1,9 +1,7 @@
-Chad Phone is a personal build of Right Dialer, stripped to essentials for self use.
+Chad Phone is a personal build of a phone dialer, stripped down to essentials for self use.
 
 Key features:
 - Full-featured call management: dialer, call history, favorites, speed dial and contacts.
 - Appearance customization: colors, themes, dialpad styles, slider styles, SIM colors and more.
 - Blocked-call support and quick-settings tile.
 - No ads, no tracking, no in-app purchases.
-
-Based on Simple Dialer, Right Dialer and Fossify Phone.

@@ -4,6 +4,10 @@
     <string name="default_phone_app_prompt">Please make this app the default Phone app</string>
     <string name="allow_displaying_over_other_apps">Please allow displaying over other apps for reliable behaviour</string>
 
+    <!-- N2: default dialer guidance -->
+    <string name="default_dialer_guidance">Chad Phone is not your system default dialer yet. Set it as default to block and answer calls reliably. If the settings page does not open, find "Dialer app" under System settings → Default apps.</string>
+    <string name="set_as_default_dialer">Set as default</string>
+
     <!-- Contacts -->
     <string name="could_not_access_contacts">Could not access your contacts</string>
 
@@ -93,5 +97,6 @@
     <string name="faq_2_title">Why emergency calls don\'t work properly?</string>
     <string name="faq_2_text">Due to system restrictions, emergency calls can only be made through your system\'s default dialer or phone app. To ensure emergency calls work properly, you need to keep the system app installed and enabled.</string>
     <string name="faq_3_title">Why are some of my contacts missing from the app?</string>
-    <string name="faq_3_text">Fossify Phone only displays contacts that have a phone number associated with them. Contacts without a phone number are not shown in the app.</string>
+    <string name="faq_3_text_chad">Chad Phone only displays contacts that have a phone number associated with them. Contacts without a phone number are not shown in the app.</string>
+    <string name="faq_6_text">This issue usually comes from the launcher not fully supporting icon customization. Try launching the app through a widget, if accessible. After launching, restore the default app icon color. In extreme cases, reinstalling the app may be necessary.</string>
 </resources>

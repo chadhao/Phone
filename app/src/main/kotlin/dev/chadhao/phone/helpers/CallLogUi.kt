@@ -16,12 +16,13 @@ import dev.chadhao.phone.databinding.DialpadSimCallKeyBinding
 import dev.chadhao.phone.extensions.DialpadSim
 import dev.chadhao.phone.extensions.config
 import dev.chadhao.phone.extensions.getDialpadSimEntries
+import dev.chadhao.phone.models.RecentCall
 
 /**
  * Shared UI helpers for call-log rows and the contact-card page.
  *
  * Kept Phone-local on purpose (R2 ruling): typography constants live in the app res
- * (values/dimens.xml) instead of the shared commons fork, so other goodwy apps are
+ * (values/dimens.xml) instead of the shared commons fork, so other apps are
  * not affected by the two-tier hierarchy introduced here.
  */
 
@@ -37,6 +38,20 @@ private const val CALL_LOG_TIME_SKEW_MS = 24L * 60 * 60 * 1000L
  */
 fun Long.isCallTimestampRenderable(): Boolean =
     this > 0L && this <= System.currentTimeMillis() + CALL_LOG_TIME_SKEW_MS
+
+/**
+ * Resolved display timestamp for a blocked-call row (N1).
+ *
+ * For blocked rows (blockReason != 0) the locally recorded interception timestamp is preferred,
+ * falling back to the CallLog-provided startTS. Both candidates must pass
+ * [Long.isCallTimestampRenderable], otherwise null is returned and the caller shows "-".
+ * Non-blocked rows return null so callers keep formatting [RecentCall.startTS] directly.
+ */
+fun RecentCall.resolvedBlockedAt(config: Config): Long? {
+    if (blockReason == null || blockReason == 0) return null
+    return config.getInterceptedAt(phoneNumber)?.takeIf { it.isCallTimestampRenderable() }
+        ?: startTS.takeIf { it.isCallTimestampRenderable() }
+}
 
 /**
  * Body-level text size (px) shared by every non-title text in call-log rows.

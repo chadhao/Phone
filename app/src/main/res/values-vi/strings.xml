@@ -74,6 +74,5 @@
     <string name="faq_2_title">Tại sao không thể sử dụng cuộc gọi khẩn cấp?</string>
     <string name="faq_2_text">Do hạn chế của hệ thống, chỉ có thể thực hiện các cuộc gọi khẩn cấp thông qua trình quay số mặc định hoặc app điện thoại của hệ thống. Để đảm bảo các cuộc gọi khẩn cấp hoạt động bình thường, bạn cần giữ app hệ thống cài đặt và được bật.</string>
     <string name="faq_3_title">Tại sao một số liên hệ của tôi không thấy trên app?</string>
-    <string name="faq_3_text">Fossify Phone chỉ hiển thị các liên hệ đã liên kết số điện thoại. Các liên hệ không có số điện thoại sẽ không được hiển thị trong app.</string>
     <string name="calling_accounts">Tài khoản cuộc gọi</string>
 </resources>
