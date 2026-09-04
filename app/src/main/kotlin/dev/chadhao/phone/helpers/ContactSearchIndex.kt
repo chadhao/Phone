@@ -8,14 +8,18 @@ import java.text.Normalizer
  *
  * Design doc: 功能调整-检索增强详细设计.md §1-§3
  *  - every contact is parsed into ordered positions (Han char => one syllable position,
- *    Latin word => one word position). Polyphonic Han chars keep ALL readings, and all
- *    candidate letter/digit strings are expanded (capped) so any reading can match.
- *  - two families of candidate strings per contact:
- *      * initials       : first letters, e.g. 李不为 -> "lbw" / "529"
- *      * full           : full letters , e.g. 李不为 -> "libuwei" / "5428934"
+ *    Latin word => one word position).
+ *  - name-tier matching uses a SINGLE canonical candidate per contact (R5 ruling):
+ *      * canonicalInitials : each char keeps ONLY its primary reading (the one shown in the
+ *        list abbreviation, == position.initials.first()), e.g. 陈伟 -> "cw" -> digits "29".
+ *      * canonicalFull     : same primary reading full syllables, e.g. 陈伟 -> "chenwei".
+ *    Polyphonic readings are deliberately NOT expanded into the name tier anymore, otherwise
+ *    朝朝 (displayed CC -> "22") could sneak in via chao+zhao cross readings as "29". All
+ *    readings are still consulted only by highlightRanges() as a fallback (宁多标,不漏标).
  *  - matching accepts subsequences (jump matching): "29" matches "529" as "b..w" of 李不为.
  *  - scoring follows §1.4: number prefix/exact > initials prefix/exact > full prefix
  *    > initials subsequence > full subsequence > number contains; + family(given) start bonus.
+ *    Name-tier hits are shifted above every phone-number hit (NAME_MATCH_BONUS).
  *
  * All query methods are thread-safe against concurrent rebuilds and should be called from a
  * background thread (records are rebuilt lazily on first use / when the source list changes).
@@ -40,6 +44,7 @@ object ContactSearchIndex {
         val isChineseName: Boolean,
         val familySyllableCount: Int,
         val totalSyllableCount: Int,
+        // R5: each list holds exactly one canonical candidate (primary reading per char).
         val initialCandidates: List<Candidate>,
         val fullCandidates: List<Candidate>,
         val phoneDigits: List<String>,
@@ -55,8 +60,6 @@ object ContactSearchIndex {
 
     @Volatile
     private var records: Map<Int, PhoneticRecord> = emptyMap()
-
-    private const val MAX_CANDIDATES = 32
 
     /**
      * Name matches always outrank phone-number matches (requirement: 姓名优先级 > 号码).
@@ -108,9 +111,11 @@ object ContactSearchIndex {
      * Latin word covers the whole word. Ranges are relative to [name].
      *
      * Polyphonic Han chars contribute ALL their readings to the alignment stream (a char keeps one
-     * position, but every reading's letters are concatenated on it), mirroring the way the index
-     * accepts any reading. Aligning against all readings can occasionally over-mark a whole char when
-     * a query spans two readings of the same character; that is the accepted trade-off (宁多标,不漏标).
+     * position, but every reading's letters are concatenated on it). This is an intentional
+     * highlight-only fallback: since R5 the index matches names through the single canonical
+     * (primary reading) candidate, but a matched char is painted regardless of which reading aligned,
+     * so the broad alignment avoids missing a highlight. It can occasionally over-mark a whole char
+     * when a query spans two readings of the same character; that is the accepted trade-off (宁多标,不漏标).
      */
     fun highlightRanges(name: String, query: String, isDigitsQuery: Boolean): List<IntRange>? {
         val q = if (isDigitsQuery) query.filter { it.isDigit() } else query.lowercase()
@@ -128,8 +133,9 @@ object ContactSearchIndex {
             if (readings.isNotEmpty()) {
                 starts.add(i)
                 ends.add(i + 1)
-                // All readings, not just the first one: a contact may have been matched through any
-                // reading, and the matched Han char must be highlighted regardless of pinyin order.
+                // All readings, not just the first one (highlight fallback): a name matched through
+                // its canonical primary reading must have the right Han char painted regardless of
+                // pinyin order, and this loose alignment guarantees the highlight is never missed.
                 initialLetters.add(readings.map { it.substring(0, 1) }.distinct().joinToString(""))
                 fullLetters.add(readings.joinToString(""))
                 i++
@@ -252,8 +258,18 @@ object ContactSearchIndex {
         val positions = parts.positions
         if (positions.isEmpty()) return null
 
-        val initialLetters = cartesian(positions.map { it.initials }).distinct().take(MAX_CANDIDATES)
-        val fullLetters = cartesian(positions.map { it.syllables }).distinct().take(MAX_CANDIDATES)
+        // Name-tier matching only uses the canonical (primary reading) sequence (R5 ruling).
+        // The primary reading of a char is the one used to build the displayed abbreviation,
+        // i.e. position.initials.first()/syllables.first(). A polyphonic char must NOT leak a
+        // secondary reading into the name tier, otherwise 朝朝 (displayed CC -> "22") could be
+        // matched through chao/zhao cross readings as "29". Alternate readings survive only in
+        // highlightRanges() below (all-readings fallback).
+        val canonicalInitials = buildString {
+            for (position in positions) append(position.initials.first())
+        }
+        val canonicalFull = buildString {
+            for (position in positions) append(position.syllables.first())
+        }
 
         val abbr = if (parts.isChineseName) {
             buildString {
@@ -274,8 +290,8 @@ object ContactSearchIndex {
             isChineseName = parts.isChineseName,
             familySyllableCount = parts.familySyllableCount,
             totalSyllableCount = positions.size,
-            initialCandidates = initialLetters.mapNotNull { it.asCandidate() },
-            fullCandidates = fullLetters.mapNotNull { it.asCandidate() },
+            initialCandidates = listOfNotNull(canonicalInitials.asCandidate()),
+            fullCandidates = listOfNotNull(canonicalFull.asCandidate()),
             phoneDigits = phoneDigits,
         )
     }
@@ -388,7 +404,9 @@ object ContactSearchIndex {
 
     /**
      * Converts [text] into ordered positions:
-     *  - a Han char becomes one position whose initials/full syllables are ALL its readings;
+     *  - a Han char becomes one position whose initials/full syllables keep ALL its readings
+     *    (the FIRST one is the primary reading used by buildRecord for the canonical name-tier
+     *    candidate, matching the displayed abbreviation);
      *  - a Latin word becomes one position (letters ASCII-folded to 'a'..'z').
      */
     private fun parsePositions(text: String): List<Position> {
@@ -440,25 +458,6 @@ object ContactSearchIndex {
             }
         }
         return normalized.toString()
-    }
-
-    /** Cartesian product of per-position options, capped to keep pathological names bounded. */
-    private fun cartesian(options: List<List<String>>): List<String> {
-        var result = listOf("")
-        for (positionOptions in options) {
-            if (positionOptions.isEmpty()) continue
-            val next = ArrayList<String>()
-            for (prefix in result) {
-                for (option in positionOptions) {
-                    next.add(prefix + option)
-                    if (next.size >= MAX_CANDIDATES * 8) break
-                }
-                if (next.size >= MAX_CANDIDATES * 8) break
-            }
-            result = next
-            if (result.size >= MAX_CANDIDATES * 8) break
-        }
-        return result
     }
 
     private fun String.asCandidate(): Candidate? {

@@ -15,6 +15,11 @@ import net.sourceforge.pinyin4j.format.HanyuPinyinVCharType
  *  - detect whether a text/char is Chinese (has any pinyin reading)
  *
  * ü is rendered as "v" (e.g. 绿 -> "lv") so all output only contains 'a'..'z'.
+ *
+ * Primary-reading convention (R5 ruling): the FIRST reading returned for a char is the one used
+ * by list abbreviations and by the canonical name-tier candidate in ContactSearchIndex. It is the
+ * same source (`getReadings(char).first()`), so the displayed abbreviation always agrees with what
+ * the search index accepts for that name. Alternate readings stay available to highlightRanges().
  */
 object PinyinConverter {
 

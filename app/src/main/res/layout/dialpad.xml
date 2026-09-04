@@ -19,21 +19,30 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <RelativeLayout
+        <LinearLayout
             android:id="@+id/dialpadInputHolder"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="@dimen/small_margin"
-            app:layout_constraintTop_toTopOf="parent">
+            android:gravity="center_vertical"
+            android:layout_marginBottom="@dimen/small_margin">
+
+            <!-- R6: invisible 62dp mirror of dialpadMenu. Without it the editable text region would
+                 run from the left edge to the menu (right side loses 62dp), making the typed number
+                 string look left-shifted. With a left spacer of equal width the weighted input row
+                 is symmetric and gravity="center" centres the digits on the dialpad below. -->
+            <View
+                android:id="@+id/dialpadMenuSpacer"
+                android:layout_width="62dp"
+                android:layout_height="1dp"
+                android:importantForAccessibility="no"
+                tools:ignore="UselessParent"/>
 
             <com.goodwy.commons.views.MyEditText
                 android:id="@+id/dialpadInput"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
-                android:layout_toStartOf="@id/dialpadMenu"
-                android:layout_centerVertical="true"
+                android:layout_weight="1"
                 android:layout_marginStart="@dimen/small_margin"
                 android:layout_marginEnd="@dimen/small_margin"
                 android:gravity="center"
@@ -48,14 +57,12 @@
                 android:id="@+id/dialpadMenu"
                 android:layout_width="62dp"
                 android:layout_height="62dp"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
                 android:layoutDirection="ltr"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:padding="18dp"
                 android:contentDescription="@string/more_options"
                 android:src="@drawable/ic_three_dots_vector"/>
-        </RelativeLayout>
+        </LinearLayout>
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/dialpadWrapper"
@@ -610,22 +617,22 @@
             <RelativeLayout
                 android:id="@+id/dialpadHideHolder"
                 style="@style/DialpadButtonStyle"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
+                android:layout_width="@dimen/dialpad_side_key_width"
+                android:layout_height="@dimen/dialpad_side_key_height"
+                android:layout_marginStart="0dp"
+                android:layout_marginEnd="0dp"
                 android:background="@drawable/pill_background_ripple"
                 android:contentDescription="@string/delete"
                 app:layout_constraintBottom_toTopOf="@+id/divider_horizontal_five"
-                app:layout_constraintEnd_toStartOf="@+id/divider_vertical_one"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/divider_horizontal_four">
 
                 <ImageView
                     android:id="@+id/dialpadHide"
-                    android:layout_width="42dp"
-                    android:layout_height="42dp"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
                     android:layout_centerInParent="true"
                     android:layoutDirection="ltr"
-                    android:padding="@dimen/medium_margin"
                     android:contentDescription="null"
                     android:src="@drawable/ic_dialpad_vector"/>
             </RelativeLayout>
@@ -636,41 +643,44 @@
                 android:layout_height="0dp"
                 android:orientation="horizontal"
                 android:gravity="center"
+                android:layout_marginStart="@dimen/dialpad_call_key_min_gap"
+                android:layout_marginEnd="@dimen/dialpad_call_key_min_gap"
                 app:layout_constraintBottom_toTopOf="@+id/divider_horizontal_five"
-                app:layout_constraintEnd_toStartOf="@+id/divider_vertical_two"
-                app:layout_constraintStart_toEndOf="@+id/divider_vertical_one"
+                app:layout_constraintEnd_toStartOf="@+id/dialpadClearCharHolder"
+                app:layout_constraintStart_toEndOf="@+id/dialpadHideHolder"
                 app:layout_constraintTop_toBottomOf="@+id/divider_horizontal_four"
                 tools:ignore="UselessParent"/>
 
             <RelativeLayout
                 android:id="@+id/dialpadClearCharHolder"
                 style="@style/DialpadButtonStyle"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
+                android:layout_width="@dimen/dialpad_side_key_width"
+                android:layout_height="@dimen/dialpad_side_key_height"
+                android:layout_marginStart="0dp"
+                android:layout_marginEnd="0dp"
                 android:background="@drawable/pill_background_ripple"
                 android:contentDescription="@string/delete"
                 app:layout_constraintBottom_toTopOf="@+id/divider_horizontal_five"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toEndOf="@+id/divider_vertical_two"
                 app:layout_constraintTop_toBottomOf="@+id/divider_horizontal_four">
 
                 <ImageView
                     android:id="@+id/dialpadClearChar"
-                    android:layout_width="42dp"
-                    android:layout_height="42dp"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
                     android:layout_centerInParent="true"
                     android:layoutDirection="ltr"
-                    android:paddingEnd="4dp"
+                    android:paddingEnd="2dp"
                     android:contentDescription="null"
                     android:src="@drawable/ic_backspace"/>
 
                 <ImageView
                     android:id="@+id/dialpadClearCharX"
-                    android:layout_width="42dp"
-                    android:layout_height="42dp"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
                     android:layout_centerInParent="true"
                     android:layoutDirection="ltr"
-                    android:paddingEnd="4dp"
+                    android:paddingEnd="2dp"
                     android:contentDescription="null"
                     app:srcCompat="@drawable/ic_backspace_x"
                     tools:tint="@color/hint_black" />

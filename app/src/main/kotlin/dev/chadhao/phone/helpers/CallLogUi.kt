@@ -2,11 +2,12 @@ package dev.chadhao.phone.helpers
 
 import android.content.Context
 import android.view.View
+import android.widget.LinearLayout
+import androidx.core.content.ContextCompat
 import com.goodwy.commons.extensions.beGone
 import com.goodwy.commons.extensions.beVisible
 import com.goodwy.commons.extensions.getContrastColor
 import com.goodwy.commons.extensions.getProperPrimaryColor
-import com.goodwy.commons.extensions.getProperTextColor
 import com.goodwy.commons.extensions.getTextSize
 import dev.chadhao.phone.R
 import dev.chadhao.phone.activities.SimpleActivity
@@ -92,13 +93,27 @@ private fun DialpadBinding.buildDialpadCallKey(
     onCallLongClick: (() -> Unit)?
 ): View {
     val keyBinding = DialpadSimCallKeyBinding.inflate(activity.layoutInflater, dialpadCallContainer, false)
-    val properTextColor = activity.getProperTextColor()
     val fallbackColor = activity.config.simIconsColors[1].takeIf { it != 0 } ?: activity.getProperPrimaryColor()
     val keyColor = sim?.color?.takeIf { it != 0 } ?: fallbackColor
     val iconColor = keyColor.getContrastColor()
 
-    keyBinding.simKeyIconHolder.background.setTint(keyColor)
+    // R6: the whole key is a horizontal capsule tinted with the SIM color. clone the shared
+    // shape resource per key (constantState.newDrawable + mutate) so dual-SIM colors never
+    // bleed into each other through the drawable cache.
+    val capsuleBase = ContextCompat.getDrawable(activity, R.drawable.dialpad_call_key_capsule)
+    val capsule = capsuleBase?.constantState?.newDrawable()?.mutate()
+    capsule?.setTint(keyColor)
+    keyBinding.root.background = capsule ?: keyBinding.root.background
     keyBinding.simKeyIcon.setColorFilter(iconColor)
+
+    // Keep a small gap between two capsules sharing the middle cell (min_gap is the total gap).
+    val layoutParams = keyBinding.root.layoutParams
+    if (layoutParams is LinearLayout.LayoutParams) {
+        val gap = activity.resources.getDimensionPixelSize(R.dimen.dialpad_call_key_min_gap)
+        layoutParams.marginStart = gap / 2
+        layoutParams.marginEnd = gap / 2
+        keyBinding.root.layoutParams = layoutParams
+    }
 
     if (sim != null) {
         val iconRes = when (sim.id) {
@@ -111,7 +126,8 @@ private fun DialpadBinding.buildDialpadCallKey(
         keyBinding.simKeyLabel.apply {
             beVisible()
             text = sim.carrierName ?: sim.id.toString()
-            setTextColor(properTextColor)
+            // The label now lives inside the colored capsule -> use the contrast color.
+            setTextColor(iconColor)
             contentDescription = null
         }
         keyBinding.root.contentDescription = if (sim.carrierName.isNullOrEmpty()) {

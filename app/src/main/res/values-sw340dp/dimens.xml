@@ -17,6 +17,7 @@
 
     <!-- keep these 2 values in dp to avoid scaling -->
     <dimen name="dialpad_text_size">36sp</dimen>
+    <dimen name="dialpad_key_text_size">30sp</dimen>
 
     <!--Goodwy-->
     <dimen name="tab_layout_width">114dp</dimen>

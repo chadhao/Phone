@@ -1,41 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    R6: dialpad call (SIM) key is now a horizontal capsule instead of a small circle under a label.
+    The capsule background (dialpad_call_key_capsule) is tinted at runtime per SIM color by
+    CallLogUi.buildDialpadCallKey; icon + carrier name share the same key surface.
+    No-SIM keeps the identical structure with the label hidden and the generic call description.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/sim_call_key"
     android:layout_width="0dp"
-    android:layout_height="match_parent"
+    android:layout_height="@dimen/dialpad_call_key_height"
     android:layout_weight="1"
-    android:orientation="vertical"
+    android:orientation="horizontal"
     android:gravity="center"
-    android:background="?attr/selectableItemBackgroundBorderless"
+    android:paddingStart="@dimen/three_dp"
+    android:paddingEnd="@dimen/three_dp"
+    android:background="@drawable/dialpad_call_key_capsule"
     android:clickable="true"
     android:focusable="true"
     tools:ignore="UselessParent">
 
-    <FrameLayout
-        android:id="@+id/sim_key_icon_holder"
+    <ImageView
+        android:id="@+id/sim_key_icon"
         android:layout_width="@dimen/dialpad_call_key_icon_size"
         android:layout_height="@dimen/dialpad_call_key_icon_size"
-        android:background="@drawable/circle_background">
-
-        <ImageView
-            android:id="@+id/sim_key_icon"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:padding="@dimen/dialpad_call_key_icon_padding"
-            android:contentDescription="@null"
-            android:importantForAccessibility="no"
-            android:scaleType="fitCenter"
-            app:srcCompat="@drawable/ic_phone_vector" />
-    </FrameLayout>
+        android:contentDescription="@null"
+        android:importantForAccessibility="no"
+        android:scaleType="fitCenter"
+        app:srcCompat="@drawable/ic_phone_vector" />
 
     <TextView
         android:id="@+id/sim_key_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/dialpad_call_key_label_gap"
-        android:maxWidth="96dp"
+        android:layout_marginStart="@dimen/dialpad_call_key_label_gap"
+        android:maxWidth="80dp"
         android:maxLines="1"
         android:ellipsize="end"
         android:gravity="center"

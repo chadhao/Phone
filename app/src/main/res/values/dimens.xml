@@ -22,6 +22,7 @@
 
     <!-- keep these 2 values in dp to avoid scaling -->
     <dimen name="dialpad_text_size">36sp</dimen>
+    <dimen name="dialpad_key_text_size">30sp</dimen>
 
     <!--Goodwy-->
     <dimen name="tab_layout_width">114dp</dimen>
@@ -68,10 +69,15 @@
     <dimen name="call_log_title_text_size">22sp</dimen>
     <dimen name="call_log_body_text_size">14sp</dimen>
 
-    <!--Dialpad SIM call keys (R4)-->
-    <dimen name="dialpad_call_key_icon_size">44dp</dimen>
-    <dimen name="dialpad_call_key_icon_padding">10dp</dimen>
+    <!--Dialpad SIM call keys (R4, restyled to horizontal capsules in R6)-->
+    <dimen name="dialpad_call_key_height">44dp</dimen>
+    <dimen name="dialpad_call_key_corner_radius">22dp</dimen>
+    <dimen name="dialpad_call_key_icon_size">22dp</dimen>
     <dimen name="dialpad_call_key_label_text_size">11sp</dimen>
-    <dimen name="dialpad_call_key_label_gap">2dp</dimen>
-    <dimen name="dialpad_call_key_min_gap">2dp</dimen>
+    <dimen name="dialpad_call_key_label_gap">4dp</dimen>
+    <dimen name="dialpad_call_key_min_gap">4dp</dimen>
+
+    <!--Dialpad bottom control row (R6): side keys moved to the outer edges-->
+    <dimen name="dialpad_side_key_width">56dp</dimen>
+    <dimen name="dialpad_side_key_height">48dp</dimen>
 </resources>

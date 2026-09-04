@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    R6: horizontal capsule used as the dialpad call (SIM) key surface.
+    Mirrors the commons circle_background pattern: a plain shape with a primary base color that
+    CallLogUi.renderDialpadCallKeys tints at runtime with each SIM's color (background.setTint).
+    Corner radius is dims-driven (dialpad_call_key_corner_radius = height/2) so single/dual/no-SIM
+    keys all render as a pill.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="@dimen/dialpad_call_key_corner_radius" />
+    <solid android:color="@color/color_primary" />
+</shape>
